@@ -1,34 +1,10 @@
-import {
-  ArrowRight,
-  CalendarCheck,
-  Clock,
-  Crown,
-  Scissors,
-  Sparkles,
-  UserRound,
-  type LucideIcon,
-} from 'lucide-react'
+import { ArrowRight, CalendarCheck, Clock, Scissors, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
-
-type Servico = { nome: string; descricao: string; icone: LucideIcon }
-
-const servicos: Servico[] = [
-  {
-    nome: 'Corte',
-    descricao: 'Na tesoura ou na máquina, do clássico ao degradê, com acabamento na navalha.',
-    icone: Scissors,
-  },
-  {
-    nome: 'Barba',
-    descricao: 'Toalha quente, navalha e hidratação para uma barba alinhada e confortável.',
-    icone: Sparkles,
-  },
-  {
-    nome: 'Corte + Barba',
-    descricao: 'O serviço completo para sair pronto, em um único horário.',
-    icone: Crown,
-  },
-]
+import { ErroCarregamento, Esqueleto } from '../components/agendamento/Estados.tsx'
+import { iconeDoServico } from '../components/agendamento/iconesServico.ts'
+import { useRecurso } from '../hooks/useRecurso.ts'
+import { listarServicos } from '../services/agendamentoApi.ts'
+import { formatarDuracao } from '../utils/datas.ts'
 
 const passos = [
   { titulo: 'Escolha o serviço', descricao: 'Corte, barba ou o combo completo.', icone: Scissors },
@@ -37,6 +13,9 @@ const passos = [
 ]
 
 export default function Inicio() {
+  // Vem da mesma fonte do agendamento: o que o dono altera no painel aparece aqui.
+  const servicos = useRecurso('servicos', listarServicos)
+
   return (
     <>
       <section className="hero">
@@ -85,20 +64,32 @@ export default function Inicio() {
             <h2>O que fazemos por você</h2>
           </header>
 
-          <ul className="grade-servicos">
-            {servicos.map(({ nome, descricao, icone: Icone }) => (
-              <li key={nome} className="cartao-servico">
-                <span className="icone-destaque" aria-hidden="true">
-                  <Icone size={22} />
-                </span>
-                <h3>{nome}</h3>
-                <p>{descricao}</p>
-                <Link to="/agendar" className="link-seta" aria-label={`Agendar ${nome}`}>
-                  Agendar <ArrowRight size={16} aria-hidden="true" />
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {servicos.carregando && <Esqueleto quantidade={3} className="grade-servicos" />}
+          {servicos.erro && (
+            <ErroCarregamento mensagem={servicos.erro} onTentarNovamente={servicos.recarregar} />
+          )}
+          {servicos.dados && (
+            <ul className="grade-servicos">
+              {servicos.dados.map(({ id, nome, descricao, duracaoMin }) => {
+                const Icone = iconeDoServico(id)
+                return (
+                  <li key={id} className="cartao-servico">
+                    <span className="icone-destaque" aria-hidden="true">
+                      <Icone size={22} />
+                    </span>
+                    <h3>{nome}</h3>
+                    <p>{descricao}</p>
+                    <span className="opcao-meta">
+                      <Clock size={14} aria-hidden="true" /> {formatarDuracao(duracaoMin)}
+                    </span>
+                    <Link to="/agendar" className="link-seta" aria-label={`Agendar ${nome}`}>
+                      Agendar <ArrowRight size={16} aria-hidden="true" />
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
       </section>
 

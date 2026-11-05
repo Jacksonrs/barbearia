@@ -520,8 +520,8 @@
   gap: 8px;
 }
 
-.campo:first-child,
-.campo:last-child {
+.campos > .campo:first-child,
+.campos > .campo:last-child {
   grid-column: 1 / -1;
 }
 

@@ -1,6 +1,15 @@
-import { Menu, Scissors, X } from 'lucide-react'
+import {
+  CalendarCheck,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
+  Menu,
+  Scissors,
+  X,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/auth.ts'
 
 const anoAtual = new Date().getFullYear()
 
@@ -39,6 +48,14 @@ function useRolagemPorRota() {
 export default function Layout() {
   const [menuAberto, setMenuAberto] = useState(false)
   const fecharMenu = () => setMenuAberto(false)
+  const { usuario, sair } = useAuth()
+  const navegar = useNavigate()
+
+  function sairDaConta() {
+    fecharMenu()
+    sair()
+    navegar('/')
+  }
 
   useRolagemPorRota()
 
@@ -72,9 +89,35 @@ export default function Layout() {
                 {link.rotulo}
               </Link>
             ))}
-            <Link to="/agendar" className="botao botao--pequeno" onClick={fecharMenu}>
-              Agendar
-            </Link>
+
+            <span className="menu-separador" aria-hidden="true" />
+
+            {usuario ? (
+              <>
+                {usuario.papel === 'dono' ? (
+                  <NavLink to="/painel" onClick={fecharMenu}>
+                    <LayoutDashboard size={17} aria-hidden="true" /> Painel
+                  </NavLink>
+                ) : (
+                  <NavLink to="/meus-agendamentos" onClick={fecharMenu}>
+                    <CalendarCheck size={17} aria-hidden="true" /> Meus agendamentos
+                  </NavLink>
+                )}
+                <button type="button" className="menu-link-botao" onClick={sairDaConta}>
+                  <LogOut size={17} aria-hidden="true" /> Sair
+                </button>
+              </>
+            ) : (
+              <NavLink to="/entrar" onClick={fecharMenu}>
+                <LogIn size={17} aria-hidden="true" /> Entrar
+              </NavLink>
+            )}
+
+            {usuario?.papel !== 'dono' && (
+              <Link to="/agendar" className="botao botao--pequeno" onClick={fecharMenu}>
+                Agendar
+              </Link>
+            )}
           </nav>
 
           <button

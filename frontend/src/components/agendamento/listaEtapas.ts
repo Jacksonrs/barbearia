@@ -17,6 +17,6 @@ export const ETAPAS = [
   {
     nome: 'Seus dados',
     titulo: 'Seus dados',
-    descricao: 'Usamos apenas para confirmar e lembrar você do horário.',
+    descricao: 'Confira seus dados de contato. Já preenchemos com os dados da sua conta.',
   },
 ] as const

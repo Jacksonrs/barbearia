@@ -1,22 +1,7 @@
-import { render, screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
-import { beforeAll, describe, expect, it } from 'vitest'
-import App from '../src/App.tsx'
-
-beforeAll(() => {
-  window.scrollTo = () => {}
-  Element.prototype.scrollIntoView = () => {}
-})
-
-function renderizar() {
-  render(
-    <MemoryRouter initialEntries={['/agendar']}>
-      <App />
-    </MemoryRouter>,
-  )
-  return userEvent.setup()
-}
+import { screen, within } from '@testing-library/react'
+import type userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { entrarComoCliente, renderizar } from './utilitarios.tsx'
 
 const continuar = () => screen.getByRole('button', { name: /continuar/i })
 
@@ -51,22 +36,26 @@ async function escolherAteDados(usuario: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('Agendamento', () => {
+  beforeEach(async () => {
+    await entrarComoCliente()
+  })
+
   it('só permite continuar depois de escolher o serviço', async () => {
-    const usuario = renderizar()
+    const usuario = renderizar('/agendar')
     expect(continuar()).toBeDisabled()
     await usuario.click(await screen.findByRole('radio', { name: 'Corte' }))
     expect(continuar()).toBeEnabled()
   })
 
   it('mostra a escolha no resumo', async () => {
-    const usuario = renderizar()
+    const usuario = renderizar('/agendar')
     await usuario.click(await screen.findByRole('radio', { name: 'Barba' }))
     const resumo = screen.getByRole('complementary', { name: 'Resumo do agendamento' })
     expect(within(resumo).getByText('Barba · 30 min')).toBeInTheDocument()
   })
 
   it('mostra o resumo curto e permite abrir o resumo completo (celular)', async () => {
-    const usuario = renderizar()
+    const usuario = renderizar('/agendar')
     const alternar = screen.getByRole('button', { name: /resumo/i })
     expect(alternar).toHaveTextContent('Nada escolhido ainda')
 
@@ -78,37 +67,45 @@ describe('Agendamento', () => {
     expect(alternar).toHaveAttribute('aria-expanded', 'true')
   })
 
+  it('preenche os dados com a conta do cliente', async () => {
+    const usuario = renderizar('/agendar')
+    await escolherAteDados(usuario)
+    expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza')
+    expect(screen.getByLabelText('Telefone / WhatsApp')).toHaveValue('(11) 98765-4321')
+  })
+
   it('valida os dados do cliente antes de confirmar', async () => {
-    const usuario = renderizar()
+    const usuario = renderizar('/agendar')
     await escolherAteDados(usuario)
 
+    await usuario.clear(screen.getByLabelText('Nome completo'))
+    await usuario.clear(screen.getByLabelText('Telefone / WhatsApp'))
     await usuario.click(screen.getByRole('button', { name: 'Confirmar agendamento' }))
+
     expect(screen.getByText('Informe seu nome.')).toBeInTheDocument()
     expect(screen.getByText('Informe seu telefone.')).toBeInTheDocument()
     expect(screen.getByLabelText('Nome completo')).toHaveFocus()
   })
 
   it('formata o telefone enquanto digita', async () => {
-    const usuario = renderizar()
+    const usuario = renderizar('/agendar')
     await escolherAteDados(usuario)
 
     const telefone = screen.getByLabelText('Telefone / WhatsApp')
-    await usuario.type(telefone, '11987654321')
-    expect(telefone).toHaveValue('(11) 98765-4321')
+    await usuario.clear(telefone)
+    await usuario.type(telefone, '21912345678')
+    expect(telefone).toHaveValue('(21) 91234-5678')
   })
 
-  it('conclui um agendamento completo', async () => {
-    const usuario = renderizar()
+  it('conclui o agendamento e ele aparece em "Meus agendamentos"', async () => {
+    const usuario = renderizar('/agendar')
     await escolherAteDados(usuario)
 
-    await usuario.type(screen.getByLabelText('Nome completo'), 'Maria Souza')
-    await usuario.type(screen.getByLabelText('Telefone / WhatsApp'), '11987654321')
     await usuario.click(screen.getByRole('button', { name: 'Confirmar agendamento' }))
-
-    expect(
-      await screen.findByRole('heading', { name: 'Agendamento confirmado!' }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Agendamento confirmado!' })).toBeInTheDocument()
     expect(screen.getByText(/tudo certo, maria/i)).toBeInTheDocument()
-    expect(screen.getByText(/^JR-/)).toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('link', { name: 'Ver meus agendamentos' }))
+    expect(await screen.findByRole('heading', { level: 3, name: 'Corte + Barba' })).toBeInTheDocument()
   })
 })

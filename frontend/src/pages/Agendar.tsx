@@ -10,16 +10,13 @@ import { ETAPAS } from '../components/agendamento/listaEtapas.ts'
 import { ErroCarregamento, Esqueleto } from '../components/agendamento/Estados.tsx'
 import Resumo from '../components/agendamento/Resumo.tsx'
 import { itensResumo } from '../components/agendamento/itensResumo.ts'
+import { useUsuarioLogado } from '../contexts/auth.ts'
 import { useRecurso } from '../hooks/useRecurso.ts'
 import { criarAgendamento, listarBarbeiros, listarServicos } from '../services/agendamentoApi.ts'
-import {
-  SEM_PREFERENCIA,
-  type AgendamentoConfirmado,
-  type DadosCliente,
-} from '../types/agendamento.ts'
+import { SEM_PREFERENCIA, type Agendamento, type DadosCliente } from '../types/agendamento.ts'
+import type { Usuario } from '../types/usuario.ts'
 import { validarCliente } from '../utils/cliente.ts'
 import { formatarDataCurta, formatarDataLonga, formatarDuracao } from '../utils/datas.ts'
-import '../styles/agendamento.css'
 
 const ULTIMA_ETAPA = ETAPAS.length - 1
 
@@ -40,15 +37,23 @@ type Acao =
   | { tipo: 'cliente'; campo: keyof DadosCliente; valor: string }
   | { tipo: 'irPara'; etapa: number }
   | { tipo: 'trocarHorario' }
-  | { tipo: 'reiniciar' }
+  | { tipo: 'reiniciar'; estado: Estado }
 
-const estadoInicial: Estado = {
-  etapa: 0,
-  servicoId: null,
-  barbeiroId: null,
-  data: null,
-  hora: null,
-  cliente: { nome: '', telefone: '', email: '', observacao: '' },
+/** Começa com os dados de contato da conta já preenchidos. */
+function criarEstadoInicial(usuario: Usuario): Estado {
+  return {
+    etapa: 0,
+    servicoId: null,
+    barbeiroId: null,
+    data: null,
+    hora: null,
+    cliente: {
+      nome: usuario.nome,
+      telefone: usuario.telefone,
+      email: usuario.email,
+      observacao: '',
+    },
+  }
 }
 
 function reducer(estado: Estado, acao: Acao): Estado {
@@ -69,7 +74,7 @@ function reducer(estado: Estado, acao: Acao): Estado {
     case 'trocarHorario':
       return { ...estado, etapa: 2, hora: null }
     case 'reiniciar':
-      return estadoInicial
+      return acao.estado
   }
 }
 
@@ -96,10 +101,11 @@ type Envio =
   | { status: 'parado' }
   | { status: 'enviando' }
   | { status: 'erro'; mensagem: string }
-  | { status: 'confirmado'; agendamento: AgendamentoConfirmado }
+  | { status: 'confirmado'; agendamento: Agendamento }
 
 export default function Agendar() {
-  const [estado, despachar] = useReducer(reducer, estadoInicial)
+  const usuario = useUsuarioLogado()
+  const [estado, despachar] = useReducer(reducer, usuario, criarEstadoInicial)
   const [envio, setEnvio] = useState<Envio>({ status: 'parado' })
   const [mostrarErros, setMostrarErros] = useState(false)
 
@@ -160,7 +166,10 @@ export default function Agendar() {
 
     setEnvio({ status: 'enviando' })
     try {
-      const agendamento = await criarAgendamento({ servicoId, barbeiroId, data, hora, cliente })
+      const agendamento = await criarAgendamento(
+        { servicoId, barbeiroId, data, hora, cliente },
+        usuario,
+      )
       setEnvio({ status: 'confirmado', agendamento })
     } catch (erro) {
       setEnvio({
@@ -191,7 +200,7 @@ export default function Agendar() {
   function reiniciar() {
     setEnvio({ status: 'parado' })
     setMostrarErros(false)
-    despachar({ tipo: 'reiniciar' })
+    despachar({ tipo: 'reiniciar', estado: criarEstadoInicial(usuario) })
   }
 
   function conteudoEtapa() {
@@ -255,7 +264,7 @@ export default function Agendar() {
           <Confirmado
             codigo={envio.agendamento.id}
             nomeCliente={envio.agendamento.cliente.nome}
-            itens={itens(envio.agendamento.barbeiroIdFinal)}
+            itens={itens(envio.agendamento.barbeiroId)}
             onNovo={reiniciar}
           />
         ) : (

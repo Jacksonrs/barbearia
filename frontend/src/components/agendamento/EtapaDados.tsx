@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import type { DadosCliente } from '../../types/agendamento.ts'
 import { formatarTelefone, type ErrosCliente } from '../../utils/cliente.ts'
+import Campo from '../Campo.tsx'
 
 const LIMITE_OBSERVACAO = 200
 
@@ -11,44 +12,7 @@ type Props = {
   onAlterar: (campo: keyof DadosCliente, valor: string) => void
 }
 
-type CampoProps = {
-  campo: keyof DadosCliente
-  rotulo: string
-  opcional?: boolean
-  erro?: string
-  dica?: ReactNode
-  children: (props: {
-    id: string
-    'aria-invalid': boolean
-    'aria-describedby': string | undefined
-  }) => ReactNode
-}
-
-function Campo({ campo, rotulo, opcional, erro, dica, children }: CampoProps) {
-  const id = `cliente-${campo}`
-  const descricao = erro ? `${id}-erro` : dica ? `${id}-dica` : undefined
-  return (
-    <div className={`campo${erro ? ' campo--erro' : ''}`}>
-      <label htmlFor={id} className="campo-rotulo">
-        {rotulo}
-        {opcional && <span className="campo-opcional">opcional</span>}
-      </label>
-      {children({ id, 'aria-invalid': Boolean(erro), 'aria-describedby': descricao })}
-      {erro ? (
-        <span id={`${id}-erro`} className="campo-erro">
-          {erro}
-        </span>
-      ) : (
-        dica && (
-          <span id={`${id}-dica`} className="campo-dica">
-            {dica}
-          </span>
-        )
-      )}
-    </div>
-  )
-}
-
+/** Os dados já vêm preenchidos com a conta do cliente; ele só confere ou ajusta. */
 export default function EtapaDados({ cliente, erros, mostrarTodosErros, onAlterar }: Props) {
   const [tocados, setTocados] = useState<Partial<Record<keyof DadosCliente, boolean>>>({})
   const tocar = (campo: keyof DadosCliente) => () => setTocados((t) => ({ ...t, [campo]: true }))
@@ -57,7 +21,7 @@ export default function EtapaDados({ cliente, erros, mostrarTodosErros, onAltera
 
   return (
     <div className="campos">
-      <Campo campo="nome" rotulo="Nome completo" erro={erroVisivel('nome')}>
+      <Campo id="cliente-nome" rotulo="Nome completo" erro={erroVisivel('nome')}>
         {(props) => (
           <input
             {...props}
@@ -71,7 +35,7 @@ export default function EtapaDados({ cliente, erros, mostrarTodosErros, onAltera
       </Campo>
 
       <Campo
-        campo="telefone"
+        id="cliente-telefone"
         rotulo="Telefone / WhatsApp"
         erro={erroVisivel('telefone')}
         dica="Com DDD. Usado para confirmar o horário."
@@ -90,7 +54,7 @@ export default function EtapaDados({ cliente, erros, mostrarTodosErros, onAltera
         )}
       </Campo>
 
-      <Campo campo="email" rotulo="E-mail" opcional erro={erroVisivel('email')}>
+      <Campo id="cliente-email" rotulo="E-mail" opcional erro={erroVisivel('email')}>
         {(props) => (
           <input
             {...props}
@@ -105,7 +69,7 @@ export default function EtapaDados({ cliente, erros, mostrarTodosErros, onAltera
       </Campo>
 
       <Campo
-        campo="observacao"
+        id="cliente-observacao"
         rotulo="Observação"
         opcional
         dica={`${cliente.observacao.length}/${LIMITE_OBSERVACAO}`}

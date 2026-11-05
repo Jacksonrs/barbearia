@@ -251,14 +251,40 @@ a {
   gap: 32px;
 }
 
-.menu a:not(.botao) {
+.menu a:not(.botao),
+.menu-link-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.92rem;
   color: var(--cor-texto-suave);
   transition: color var(--transicao);
 }
 
-.menu a:not(.botao):hover {
+.menu-link-botao {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu a:not(.botao):hover,
+.menu a.active:not(.botao),
+.menu-link-botao:hover {
   color: var(--cor-texto);
+}
+
+.menu a svg,
+.menu-link-botao svg {
+  color: var(--cor-destaque);
+}
+
+.menu-separador {
+  width: 1px;
+  height: 20px;
+  background: var(--cor-borda-forte);
 }
 
 .menu-botao {
@@ -630,7 +656,8 @@ a {
   }
 }
 
-@media (max-width: 720px) {
+/* Menu vira ☰ abaixo de 960px (com os links da conta, não cabe em tablets). */
+@media (max-width: 960px) {
   .menu-botao {
     display: inline-flex;
   }
@@ -654,11 +681,16 @@ a {
     animation: menu-descer 180ms ease-out;
   }
 
-  .menu a:not(.botao) {
+  .menu a:not(.botao),
+  .menu .menu-link-botao {
     padding: 14px 0;
     font-size: 1.05rem;
     color: var(--cor-texto);
     border-bottom: 1px solid var(--cor-borda);
+  }
+
+  .menu-separador {
+    display: none;
   }
 
   .menu .botao {
@@ -683,6 +715,9 @@ a {
     backdrop-filter: blur(2px);
     animation: aparecer 180ms ease-out;
   }
+}
+
+@media (max-width: 720px) {
 
   .hero {
     padding: 48px 0 64px;

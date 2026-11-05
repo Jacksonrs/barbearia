@@ -1,8 +1,9 @@
 import { CircleCheck } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { ListaResumo } from './Resumo.tsx'
+import { ANTECEDENCIA_CANCELAMENTO_MIN } from '../../services/agendamentoApi.ts'
 import type { ItemResumo } from './itensResumo.ts'
+import { ListaResumo } from './Resumo.tsx'
 
 type Props = {
   codigo: string
@@ -39,12 +40,17 @@ export default function Confirmado({ codigo, nomeCliente, itens, onNovo }: Props
         <ListaResumo itens={itens} />
       </div>
 
+      <p className="confirmado-nota">
+        Você pode ver ou cancelar este horário em “Meus agendamentos” (até{' '}
+        {ANTECEDENCIA_CANCELAMENTO_MIN / 60}h antes).
+      </p>
+
       <div className="confirmado-acoes">
         <button type="button" className="botao botao--secundario" onClick={onNovo}>
           Fazer outro agendamento
         </button>
-        <Link to="/" className="botao">
-          Voltar ao início
+        <Link to="/meus-agendamentos" className="botao">
+          Ver meus agendamentos
         </Link>
       </div>
     </div>

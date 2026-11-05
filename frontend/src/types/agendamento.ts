@@ -1,3 +1,5 @@
+import type { Papel } from './usuario.ts'
+
 /** Valor usado quando o cliente não escolhe um barbeiro específico. */
 export const SEM_PREFERENCIA = 'sem-preferencia'
 
@@ -6,6 +8,8 @@ export type Servico = {
   nome: string
   descricao: string
   duracaoMin: number
+  /** Serviços inativos não aparecem para os clientes, mas continuam no histórico. */
+  ativo: boolean
 }
 
 export type Barbeiro = {
@@ -38,8 +42,21 @@ export type NovoAgendamento = {
   cliente: DadosCliente
 }
 
-export type AgendamentoConfirmado = NovoAgendamento & {
+export type StatusAgendamento = 'confirmado' | 'cancelado'
+
+export type Agendamento = {
   id: string
-  /** Barbeiro que vai atender (definido pelo sistema quando é SEM_PREFERENCIA) */
-  barbeiroIdFinal: string
+  clienteId: string
+  servicoId: string
+  /** Nome do serviço no momento do agendamento (o serviço pode ser renomeado depois). */
+  servicoNome: string
+  /** Barbeiro que vai atender (definido pelo sistema quando o cliente não tem preferência). */
+  barbeiroId: string
+  data: string
+  hora: string
+  duracaoMin: number
+  cliente: DadosCliente
+  status: StatusAgendamento
+  criadoEm: string
+  canceladoPor?: Papel
 }

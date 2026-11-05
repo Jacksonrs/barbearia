@@ -1,12 +1,7 @@
-import { Check, Clock, Crown, Scissors, Sparkles, type LucideIcon } from 'lucide-react'
+import { Check, Clock } from 'lucide-react'
 import type { Servico } from '../../types/agendamento.ts'
 import { formatarDuracao } from '../../utils/datas.ts'
-
-const icones: Record<string, LucideIcon> = {
-  corte: Scissors,
-  barba: Sparkles,
-  'corte-barba': Crown,
-}
+import { iconeDoServico } from './iconesServico.ts'
 
 type Props = {
   servicos: Servico[]
@@ -20,7 +15,7 @@ export default function EtapaServico({ servicos, selecionado, onSelecionar }: Pr
       <legend className="visualmente-oculto">Serviço</legend>
       <div className="opcoes">
         {servicos.map((servico) => {
-          const Icone = icones[servico.id] ?? Scissors
+          const Icone = iconeDoServico(servico.id)
           const id = `servico-${servico.id}`
           return (
             <label key={servico.id} className="opcao">
