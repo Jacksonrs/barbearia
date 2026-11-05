@@ -1,0 +1,983 @@
+/* ===== Página de agendamento ===== */
+.secao--compacta {
+  padding-top: 56px;
+}
+
+/* ----- Indicador de etapas ----- */
+.etapas {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.etapa {
+  position: relative;
+}
+
+.etapa-botao {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 14px;
+  border: 0;
+  border-bottom: 2px solid var(--cor-borda-forte);
+  background: none;
+  color: var(--cor-texto-suave);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: default;
+  transition:
+    color var(--transicao),
+    border-color var(--transicao);
+}
+
+.etapa--concluida .etapa-botao {
+  cursor: pointer;
+  color: var(--cor-texto);
+  border-color: var(--cor-destaque);
+}
+
+.etapa--concluida .etapa-botao:hover .etapa-nome {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.etapa--atual .etapa-botao {
+  color: var(--cor-texto);
+  font-weight: 600;
+  border-color: var(--cor-destaque);
+}
+
+.etapa-marcador {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--cor-borda-forte);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.etapa--atual .etapa-marcador {
+  border-color: var(--cor-destaque);
+  color: var(--cor-destaque);
+}
+
+.etapa--concluida .etapa-marcador {
+  border-color: var(--cor-destaque);
+  background: var(--cor-destaque);
+  color: var(--cor-sobre-destaque);
+}
+
+/* ----- Estrutura ----- */
+.agendamento-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.painel {
+  border-radius: 20px;
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-superficie);
+  /* "clip" (e não "hidden") para o rodapé fixo do celular (position: sticky) funcionar.
+     min-width: 0 impede que a faixa de dias estique o painel além da tela. */
+  overflow: clip;
+  min-width: 0;
+}
+
+.painel-cabecalho {
+  padding: 32px 32px 0;
+}
+
+.painel-passo {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.painel-cabecalho h2 {
+  margin: 6px 0 6px;
+  font-size: clamp(1.5rem, 3vw, 1.9rem);
+}
+
+.painel-cabecalho h2:focus {
+  outline: none;
+}
+
+.painel-cabecalho p {
+  color: var(--cor-texto-suave);
+}
+
+.painel-conteudo {
+  padding: 28px 32px 32px;
+}
+
+.painel-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 32px;
+  border-top: 1px solid var(--cor-borda);
+  background: var(--cor-fundo-alt);
+}
+
+.painel-avancar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.painel-aviso {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+.painel > .alerta {
+  margin: 0 32px 24px;
+}
+
+.botao:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.botao:disabled:hover {
+  background: var(--cor-destaque);
+}
+
+.botao--secundario:disabled:hover {
+  background: transparent;
+}
+
+.botao-texto {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cor-destaque);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ----- Grupos e opções (cards selecionáveis) ----- */
+.grupo {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.grupo + .grupo {
+  margin-top: 32px;
+}
+
+.grupo-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cor-texto-suave);
+}
+
+.grupo-contador {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--cor-destaque-suave);
+  color: var(--cor-destaque);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.opcoes {
+  display: grid;
+  gap: 12px;
+}
+
+.opcoes--grade {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.opcao {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: var(--raio);
+  border: 1px solid var(--cor-borda-forte);
+  background: var(--cor-fundo-alt);
+  cursor: pointer;
+  transition:
+    border-color var(--transicao),
+    background var(--transicao);
+}
+
+.opcao:hover {
+  border-color: rgb(201 162 77 / 0.5);
+}
+
+.opcao:has(input:checked) {
+  border-color: var(--cor-destaque);
+  background: rgb(201 162 77 / 0.07);
+  box-shadow: inset 0 0 0 1px var(--cor-destaque);
+}
+
+.opcao:has(input:focus-visible),
+.dia:has(input:focus-visible),
+.hora:has(input:focus-visible) {
+  outline: 2px solid var(--cor-destaque);
+  outline-offset: 3px;
+}
+
+.opcao-icone,
+.avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--cor-destaque-suave);
+  color: var(--cor-destaque);
+  font-weight: 700;
+}
+
+.avatar {
+  border-radius: 50%;
+  font-family: var(--fonte-titulo);
+  font-size: 1.1rem;
+}
+
+.opcao-corpo {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.opcao-titulo {
+  font-weight: 600;
+}
+
+.opcao-descricao {
+  font-size: 0.88rem;
+  color: var(--cor-texto-suave);
+}
+
+.opcao-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: var(--cor-destaque);
+}
+
+.opcao-check {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--cor-borda-forte);
+  color: transparent;
+  transition: all var(--transicao);
+}
+
+.opcao:has(input:checked) .opcao-check {
+  border-color: var(--cor-destaque);
+  background: var(--cor-destaque);
+  color: var(--cor-sobre-destaque);
+}
+
+/* ----- Dias ----- */
+.dias {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dia {
+  position: relative; /* mantém o input escondido dentro do card (evita rolagem lateral da página) */
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 12px 4px;
+  border-radius: 12px;
+  border: 1px solid var(--cor-borda-forte);
+  background: var(--cor-fundo-alt);
+  cursor: pointer;
+  transition:
+    border-color var(--transicao),
+    background var(--transicao);
+}
+
+.dia:hover {
+  border-color: rgb(201 162 77 / 0.5);
+}
+
+.dia-semana,
+.dia-mes {
+  font-size: 0.72rem;
+  text-transform: capitalize;
+  color: var(--cor-texto-suave);
+}
+
+.dia-numero {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.dia:has(input:checked) {
+  border-color: var(--cor-destaque);
+  background: var(--cor-destaque);
+  color: var(--cor-sobre-destaque);
+}
+
+.dia:has(input:checked) .dia-semana,
+.dia:has(input:checked) .dia-mes {
+  color: var(--cor-sobre-destaque);
+}
+
+.dia--fechado {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.dia--fechado:hover {
+  border-color: var(--cor-borda-forte);
+}
+
+/* ----- Horários ----- */
+.periodo + .periodo {
+  margin-top: 20px;
+}
+
+.periodo-nome {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+.horas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.hora {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 11px 0;
+  border-radius: 10px;
+  border: 1px solid var(--cor-borda-forte);
+  background: var(--cor-fundo-alt);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color var(--transicao),
+    background var(--transicao);
+}
+
+.hora:hover {
+  border-color: rgb(201 162 77 / 0.5);
+}
+
+.hora:has(input:checked) {
+  border-color: var(--cor-destaque);
+  background: var(--cor-destaque);
+  color: var(--cor-sobre-destaque);
+  font-weight: 600;
+}
+
+.hora:has(input:disabled) {
+  cursor: not-allowed;
+  color: var(--cor-texto-suave);
+  text-decoration: line-through;
+  opacity: 0.35;
+}
+
+.hora:has(input:disabled):hover {
+  border-color: var(--cor-borda-forte);
+}
+
+/* ----- Estados: vazio, carregando, erro ----- */
+.vazio {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 36px 16px;
+  border-radius: var(--raio);
+  border: 1px dashed var(--cor-borda-forte);
+  text-align: center;
+  color: var(--cor-texto-suave);
+}
+
+.vazio svg {
+  color: var(--cor-destaque);
+}
+
+.esqueleto {
+  min-height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    var(--cor-superficie-2) 0%,
+    rgb(255 255 255 / 0.06) 50%,
+    var(--cor-superficie-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: brilho 1.3s ease-in-out infinite;
+}
+
+.opcoes .esqueleto {
+  min-height: 86px;
+  border-radius: var(--raio);
+}
+
+@keyframes brilho {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.alerta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+}
+
+.alerta p {
+  flex: 1;
+  min-width: 180px;
+}
+
+.alerta--erro {
+  border: 1px solid rgb(239 98 98 / 0.4);
+  background: rgb(239 98 98 / 0.08);
+  color: #f3b0b0;
+}
+
+.alerta--erro > svg {
+  color: #ef6262;
+  flex-shrink: 0;
+}
+
+.girando {
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ----- Formulário ----- */
+.campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.campo {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.campo:first-child,
+.campo:last-child {
+  grid-column: 1 / -1;
+}
+
+.campo-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.campo-opcional {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--cor-texto-suave);
+}
+
+.campo input,
+.campo textarea {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--cor-borda-forte);
+  background: var(--cor-fundo-alt);
+  color: var(--cor-texto);
+  font: inherit;
+  transition:
+    border-color var(--transicao),
+    box-shadow var(--transicao);
+}
+
+.campo textarea {
+  resize: vertical;
+  min-height: 92px;
+}
+
+.campo input::placeholder,
+.campo textarea::placeholder {
+  color: rgb(163 159 151 / 0.6);
+}
+
+.campo input:focus,
+.campo textarea:focus {
+  outline: none;
+  border-color: var(--cor-destaque);
+  box-shadow: 0 0 0 3px rgb(201 162 77 / 0.18);
+}
+
+.campo--erro input,
+.campo--erro textarea {
+  border-color: #ef6262;
+}
+
+.campo--erro input:focus {
+  box-shadow: 0 0 0 3px rgb(239 98 98 / 0.18);
+}
+
+.campo-erro {
+  font-size: 0.82rem;
+  color: #f08a8a;
+}
+
+.campo-dica {
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+}
+
+/* ----- Resumo ----- */
+.resumo {
+  position: sticky;
+  top: calc(var(--altura-cabecalho) + 24px);
+  padding: 28px;
+  border-radius: 20px;
+  border: 1px solid var(--cor-borda);
+  background:
+    radial-gradient(90% 60% at 100% 0%, rgb(201 162 77 / 0.1), transparent 70%),
+    var(--cor-superficie);
+}
+
+.resumo-titulo {
+  margin-bottom: 18px;
+  font-size: 1.3rem;
+}
+
+/* Barra que abre/fecha o resumo — só aparece no celular. */
+.resumo-alternar {
+  display: none;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  border: 0;
+  background: none;
+  color: var(--cor-texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.resumo-alternar-rotulo {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cor-destaque);
+}
+
+.resumo-alternar-texto {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.resumo-alternar-seta {
+  flex-shrink: 0;
+  color: var(--cor-texto-suave);
+  transition: transform var(--transicao);
+}
+
+.resumo--aberto .resumo-alternar-seta {
+  transform: rotate(180deg);
+}
+
+.resumo-lista {
+  margin: 0;
+  display: grid;
+}
+
+.resumo-linha {
+  display: grid;
+  gap: 4px;
+  padding: 14px 0;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.resumo-linha dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.resumo-linha dt svg {
+  color: var(--cor-destaque);
+}
+
+.resumo-linha dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.resumo-linha dd::first-letter {
+  text-transform: uppercase;
+}
+
+.resumo-vazio {
+  color: rgb(163 159 151 / 0.6);
+  font-weight: 400 !important;
+}
+
+/* ----- Confirmação ----- */
+.confirmado {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px 40px;
+  text-align: center;
+  animation: surgir 400ms ease-out;
+}
+
+.confirmado-icone {
+  display: inline-grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  background: var(--cor-destaque-suave);
+  color: var(--cor-destaque);
+}
+
+.confirmado h2 {
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+}
+
+.confirmado h2:focus {
+  outline: none;
+}
+
+.confirmado-texto {
+  margin-top: 10px;
+  color: var(--cor-texto-suave);
+}
+
+.confirmado-cartao {
+  margin: 28px 0;
+  padding: 8px 24px;
+  border-radius: var(--raio);
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-fundo-alt);
+  text-align: left;
+}
+
+.confirmado-codigo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+.confirmado-codigo strong {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: var(--cor-destaque);
+}
+
+.confirmado-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+/* ----- Responsivo ----- */
+@media (max-width: 960px) {
+  .agendamento-grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .resumo {
+    position: static;
+    order: -1;
+    padding: 20px 24px;
+  }
+
+  .resumo-titulo {
+    display: none;
+  }
+
+  .resumo .resumo-lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 20px;
+  }
+
+  .resumo .resumo-linha {
+    padding: 10px 0;
+  }
+
+  .resumo .resumo-linha:nth-child(-n + 2) {
+    border-top: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .secao--compacta {
+    padding-top: 32px;
+  }
+
+  .secao--compacta .secao-cabecalho--esquerda {
+    margin-bottom: 24px;
+  }
+
+  /* Etapas: só números, com o nome apenas na etapa atual. */
+  .etapas {
+    grid-template-columns: auto auto auto auto;
+    margin-bottom: 16px;
+  }
+
+  .etapa-nome {
+    display: none;
+  }
+
+  .etapa--atual .etapa-nome {
+    display: inline;
+  }
+
+  .etapa-botao {
+    min-height: 48px;
+  }
+
+  /* Resumo recolhível. */
+  .resumo {
+    padding: 0;
+    border-radius: var(--raio);
+  }
+
+  .resumo-alternar {
+    display: flex;
+  }
+
+  .resumo .resumo-lista {
+    display: none;
+    padding: 0 20px 8px;
+  }
+
+  .resumo--aberto .resumo-lista {
+    display: grid;
+  }
+
+  .resumo .resumo-linha:nth-child(-n + 2) {
+    border-top: 1px solid var(--cor-borda);
+  }
+
+  /* Painel */
+  .painel {
+    border-radius: var(--raio);
+  }
+
+  .painel-cabecalho {
+    padding: 24px 20px 0;
+  }
+
+  .painel-conteudo {
+    padding: 20px 20px 24px;
+  }
+
+  .painel > .alerta {
+    margin: 0 20px 20px;
+  }
+
+  .painel-aviso {
+    display: none;
+  }
+
+  /* Rodapé com os botões fica preso na parte de baixo da tela,
+     sempre ao alcance do polegar, mesmo com listas longas de horários. */
+  .painel-rodape {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    gap: 12px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgb(19 19 19 / 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .painel-rodape > span:empty {
+    display: none;
+  }
+
+  .painel-avancar {
+    flex: 1;
+    margin-left: 0;
+  }
+
+  .painel-avancar {
+    min-width: 0;
+  }
+
+  .painel-avancar .botao {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 18px;
+  }
+
+  .painel-rodape .botao--secundario {
+    flex-shrink: 0;
+    padding: 14px 18px;
+  }
+
+  /* Dias em faixa com rolagem lateral. */
+  .dias {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin-inline: -20px;
+    padding: 2px 20px 8px;
+    scroll-padding-inline: 20px;
+    scrollbar-width: none;
+  }
+
+  .dias::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dia {
+    flex: 0 0 64px;
+    scroll-snap-align: start;
+  }
+
+  /* 3 colunas de horários mesmo em telas de 320px. */
+  .horas {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  }
+
+  .hora {
+    min-height: 46px;
+  }
+
+  .opcao {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .opcao-icone,
+  .avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .campos {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .confirmado {
+    padding: 36px 20px;
+  }
+
+  .confirmado-cartao {
+    padding: 4px 18px;
+  }
+
+  .confirmado-acoes .botao {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  /* "Confirmar agendamento" → "Confirmar" para caber ao lado do "Voltar". */
+  .rotulo-longo {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Em telas bem estreitas o "Voltar" vira só a seta, para o "Continuar" caber. */
+  .rotulo-voltar {
+    display: none;
+  }
+
+  .painel-rodape .botao--secundario {
+    width: 48px;
+    padding: 14px 0;
+  }
+}
+
+/* Celular deitado: pouca altura, então o rodapé não fica preso para não cobrir o conteúdo. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .painel-rodape {
+    position: static;
+  }
+}

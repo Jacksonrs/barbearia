@@ -44,6 +44,22 @@ html {
 body {
   margin: 0;
   background: var(--cor-fundo);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body.sem-rolagem {
+  overflow: hidden;
+}
+
+/* Toque: sem o "flash" azul do celular e sem atraso de duplo toque. */
+a,
+button,
+label,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 h1,
@@ -75,11 +91,24 @@ a {
   border-radius: 4px;
 }
 
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .container {
   width: 100%;
   max-width: var(--largura-max);
   margin-inline: auto;
-  padding-inline: 20px;
+  /* Respeita o recorte da câmera (notch) com o celular deitado. */
+  padding-inline: max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-right));
 }
 
 /* ===== Botões e links ===== */
@@ -103,7 +132,17 @@ a {
 
 .botao:hover {
   background: var(--cor-destaque-hover);
-  transform: translateY(-1px);
+}
+
+.botao:active {
+  transform: scale(0.98);
+}
+
+/* Efeitos de "levantar" só em quem tem mouse; no toque eles ficam presos. */
+@media (hover: hover) {
+  .botao:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .botao--secundario {
@@ -125,7 +164,9 @@ a {
 .link-seta {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   gap: 6px;
+  min-height: 44px;
   color: var(--cor-destaque);
   font-weight: 600;
   font-size: 0.9rem;
@@ -397,7 +438,12 @@ a {
 
 .cartao-servico:hover {
   border-color: rgb(201 162 77 / 0.45);
-  transform: translateY(-3px);
+}
+
+@media (hover: hover) {
+  .cartao-servico:hover {
+    transform: translateY(-3px);
+  }
 }
 
 .cartao-servico h3 {
@@ -484,32 +530,6 @@ a {
   max-width: 760px;
 }
 
-.aviso {
-  display: flex;
-  align-items: flex-start;
-  gap: 18px;
-  margin-bottom: 32px;
-  padding: 28px;
-  border-radius: var(--raio);
-  border: 1px dashed var(--cor-borda-forte);
-  background: var(--cor-superficie);
-}
-
-.aviso svg {
-  color: var(--cor-destaque);
-  flex-shrink: 0;
-}
-
-.aviso h2 {
-  font-family: var(--fonte-texto);
-  font-size: 1.1rem;
-  margin-bottom: 4px;
-}
-
-.aviso p {
-  color: var(--cor-texto-suave);
-}
-
 .nao-encontrada {
   text-align: center;
   display: grid;
@@ -560,10 +580,13 @@ a {
 .rodape-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 28px;
+  gap: 0 28px;
 }
 
 .rodape-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-size: 0.9rem;
   color: var(--cor-texto-suave);
   transition: color var(--transicao);
@@ -628,15 +651,50 @@ a {
 
   .menu--aberto {
     display: flex;
+    animation: menu-descer 180ms ease-out;
   }
 
   .menu a:not(.botao) {
-    padding: 12px 0;
-    font-size: 1rem;
+    padding: 14px 0;
+    font-size: 1.05rem;
+    color: var(--cor-texto);
+    border-bottom: 1px solid var(--cor-borda);
   }
 
   .menu .botao {
-    margin-top: 8px;
+    margin-top: 16px;
+    padding-block: 14px;
+    font-size: 1rem;
+  }
+
+  .menu-botao {
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Escurece a página atrás do menu; tocar nela fecha o menu. */
+  .menu-fundo {
+    position: fixed;
+    inset: var(--altura-cabecalho) 0 0;
+    z-index: 9;
+    background: rgb(0 0 0 / 0.6);
+    backdrop-filter: blur(2px);
+    animation: aparecer 180ms ease-out;
+  }
+
+  .hero {
+    padding: 48px 0 64px;
+  }
+
+  /* O card decorativo repete o "Como funciona"; no celular ele só empurra o conteúdo. */
+  .hero-visual {
+    display: none;
+  }
+
+  .hero-descricao {
+    font-size: 1rem;
   }
 
   .secao {
@@ -645,7 +703,45 @@ a {
 
   .cartao-servico,
   .passo {
-    padding: 26px;
+    padding: 24px;
+  }
+
+  .secao-cabecalho {
+    margin-bottom: 36px;
+  }
+
+  .chamada {
+    padding: 28px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Botões principais ocupam a largura toda: mais fáceis de acertar com o polegar. */
+  .hero-acoes .botao,
+  .chamada .botao,
+  .nao-encontrada .botao {
+    width: 100%;
+  }
+
+  .rodape-interno {
+    padding-block: 36px 16px;
+  }
+
+  .rodape-links {
+    gap: 0 20px;
+  }
+}
+
+@keyframes menu-descer {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
   }
 }
 
@@ -654,6 +750,8 @@ a {
   *::before,
   *::after {
     transition: none !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
   }
 }

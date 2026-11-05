@@ -42,6 +42,20 @@ export default function Layout() {
 
   useRolagemPorRota()
 
+  // Com o menu do celular aberto: Esc fecha e a página de trás não rola.
+  useEffect(() => {
+    if (!menuAberto) return
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuAberto(false)
+    }
+    document.addEventListener('keydown', aoTeclar)
+    document.body.classList.add('sem-rolagem')
+    return () => {
+      document.removeEventListener('keydown', aoTeclar)
+      document.body.classList.remove('sem-rolagem')
+    }
+  }, [menuAberto])
+
   return (
     <div className="layout">
       <header className="cabecalho">
@@ -75,6 +89,8 @@ export default function Layout() {
           </button>
         </div>
       </header>
+
+      {menuAberto && <div className="menu-fundo" onClick={fecharMenu} aria-hidden="true" />}
 
       <main className="conteudo">
         <Outlet />

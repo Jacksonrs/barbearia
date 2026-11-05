@@ -40,6 +40,13 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Fechar menu' })).toHaveAttribute('aria-expanded', 'true')
   })
 
+  it('fecha o menu do celular com a tecla Esc', async () => {
+    renderizar()
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir menu' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Abrir menu' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('mostra aviso para rotas inexistentes', () => {
     renderizar('/qualquer-coisa')
     expect(screen.getByRole('heading', { level: 1, name: 'Página não encontrada' })).toBeInTheDocument()
