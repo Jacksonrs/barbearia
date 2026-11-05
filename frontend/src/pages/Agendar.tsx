@@ -166,10 +166,7 @@ export default function Agendar() {
 
     setEnvio({ status: 'enviando' })
     try {
-      const agendamento = await criarAgendamento(
-        { servicoId, barbeiroId, data, hora, cliente },
-        usuario,
-      )
+      const agendamento = await criarAgendamento({ servicoId, barbeiroId, data, hora, cliente })
       setEnvio({ status: 'confirmado', agendamento })
     } catch (erro) {
       setEnvio({

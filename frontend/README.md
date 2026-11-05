@@ -19,6 +19,13 @@ npm install      # instala as dependências (só na primeira vez)
 npm run dev      # abre em http://localhost:5173
 ```
 
+O site precisa do backend rodando ao mesmo tempo (ver `backend/INTEGRACAO_FRONTEND.md`):
+
+```bash
+cd backend && source .venv/bin/activate
+uvicorn app.main:app --reload --app-dir src
+```
+
 ## Comandos
 
 | Comando           | O que faz                            |
@@ -32,9 +39,16 @@ npm run dev      # abre em http://localhost:5173
 ## Integração com o backend
 
 Durante o desenvolvimento, toda requisição para `/api/...` é repassada para o
-backend Python em `http://localhost:8000` (configurado em `vite.config.ts`).
-Assim o front pode chamar, por exemplo, `fetch('/api/servicos')` sem se
-preocupar com CORS.
+backend Python em `http://localhost:8000` (configurado em `vite.config.ts`),
+então não há CORS e o cookie de sessão funciona sozinho.
+
+- Toda a comunicação passa por `src/services/` (`agendamentoApi.ts`,
+  `authApi.ts`, `painelApi.ts`), usando o helper `api()` de `src/services/api.ts`.
+  Ele transforma o `detail` dos erros do backend na mensagem mostrada na tela.
+- A sessão é um cookie `httpOnly`: o front não guarda token. Ao abrir o site, o
+  `AuthProvider` pergunta ao backend quem está logado (`GET /api/auth/eu`).
+- **Conta do dono** (criada pelo backend no primeiro start): `dono@jrbarber.com` / `jrbarber123`
+- "Continuar com Google" mostra um aviso até o botão oficial do Google ser configurado.
 
 ## Telas
 
@@ -47,24 +61,12 @@ preocupar com CORS.
 | `/painel`             | Só o dono        | Agenda do dia: clientes, telefone/WhatsApp, cancelar        |
 | `/painel/servicos`    | Só o dono        | Criar, editar, ativar e desativar serviços                  |
 
-## Dados de exemplo (enquanto o backend não existe)
+## Testes
 
-Tudo é **simulado no navegador** e salvo no `localStorage`, para o fluxo
-funcionar de ponta a ponta: o que o cliente agenda aparece no painel do dono, e o
-que o dono altera aparece para o cliente.
+Os testes não precisam do backend: `tests/servidorFalso.ts` substitui o `fetch`
+e responde às mesmas rotas, com os dados de exemplo de `tests/dados/`.
 
-- Dados iniciais (serviços, barbeiros, horário de funcionamento, uma agenda
-  parcialmente ocupada com clientes fictícios): `src/services/dadosExemplo.ts`
-- **Conta do dono para testes:** `dono@jrbarber.com` / `jrbarber123`
-- O botão "Continuar com Google" é uma simulação (entra numa conta de exemplo).
-- Para recomeçar do zero, apague os dados do site no navegador
-  (DevTools → Application → Local Storage).
-
-Toda a comunicação passa por `src/services/` (`agendamentoApi.ts`,
-`authApi.ts`, `painelApi.ts`). Para ligar no backend, basta trocar o corpo das
-funções por `fetch`, sem mexer nas telas.
-
-## Endpoints esperados do backend
+## Endpoints do backend
 
 Os formatos (`Servico`, `Agendamento`, `Usuario` etc.) estão em `src/types/`.
 
@@ -84,6 +86,7 @@ Os formatos (`Servico`, `Agendamento`, `Usuario` etc.) estão em `src/types/`.
 | ------ | ------------------------------------------------------ | --------------- |
 | GET    | `/api/servicos` (só ativos)                            | `Servico[]`     |
 | GET    | `/api/barbeiros`                                       | `Barbeiro[]`    |
+| GET    | `/api/funcionamento`                                   | `Funcionamento` |
 | GET    | `/api/horarios?data=AAAA-MM-DD&servico=ID&barbeiro=ID` | `Horario[]`     |
 | POST   | `/api/agendamentos` (corpo: `NovoAgendamento`)         | `Agendamento`   |
 | GET    | `/api/agendamentos/meus`                               | `Agendamento[]` |
@@ -120,11 +123,11 @@ frontend/
 │   ├── contexts/     # Login (quem está conectado)
 │   ├── hooks/        # Hooks próprios (carregamento de dados)
 │   ├── pages/        # Uma pasta/arquivo por tela
-│   ├── services/     # Acesso à API (e dados de exemplo)
+│   ├── services/     # Acesso à API do backend
 │   ├── styles/       # CSS global, variáveis de cor e estilos por tela
 │   ├── types/        # Tipos TypeScript compartilhados
 │   ├── utils/        # Funções auxiliares (datas, telefone, validação)
 │   ├── App.tsx       # Rotas
 │   └── main.tsx      # Ponto de entrada
-└── tests/            # Testes automatizados
+└── tests/            # Testes automatizados (com backend falso)
 ```

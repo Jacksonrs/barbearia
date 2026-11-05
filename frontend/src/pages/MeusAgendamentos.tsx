@@ -29,7 +29,7 @@ export default function MeusAgendamentos() {
   const usuario = useUsuarioLogado()
   // Capturado uma vez ao abrir a tela (não a cada renderização).
   const [agora] = useState(() => Date.now())
-  const lista = useRecurso(`meus|${usuario.id}`, () => listarMeusAgendamentos(usuario.id))
+  const lista = useRecurso(`meus|${usuario.id}`, listarMeusAgendamentos)
   const barbeiros = useRecurso('barbeiros', listarBarbeiros)
   const nomeBarbeiro = (id: string) => barbeiros.dados?.find((b) => b.id === id)?.nome ?? '—'
 
@@ -72,7 +72,7 @@ export default function MeusAgendamentos() {
             (podeCancelar(a) ? (
               <CancelarAgendamento
                 onConfirmar={async () => {
-                  await cancelarAgendamento(a.id, usuario)
+                  await cancelarAgendamento(a.id)
                   lista.recarregar()
                 }}
               />

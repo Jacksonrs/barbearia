@@ -1,28 +1,19 @@
 /**
- * Agendamentos do ponto de vista do cliente.
- *
- * Por enquanto tudo é SIMULADO no navegador (armazenamento.ts). Quando o backend
- * estiver pronto, troque o corpo de cada função por um fetch para a API,
- * mantendo as mesmas assinaturas — as telas não precisam mudar.
- * Os endpoints esperados estão descritos no README do frontend.
+ * Agendamentos do ponto de vista do cliente, pelo backend (/api).
+ * O cliente é sempre o usuário da sessão: o backend não aceita um id vindo do front.
  */
-import {
-  SEM_PREFERENCIA,
-  type Agendamento,
-  type Barbeiro,
-  type Horario,
-  type NovoAgendamento,
-  type Servico,
+import type {
+  Agendamento,
+  Barbeiro,
+  Funcionamento,
+  Horario,
+  NovoAgendamento,
+  Servico,
 } from '../types/agendamento.ts'
-import type { Usuario } from '../types/usuario.ts'
-import { deIso, horaParaMinutos, minutosParaHora } from '../utils/datas.ts'
-import { alterarBanco, lerBanco } from './armazenamento.ts'
-import { funcionamentoExemplo, INTERVALO_MIN } from './dadosExemplo.ts'
-import { esperar } from './rede.ts'
+import { deIso, horaParaMinutos } from '../utils/datas.ts'
+import { api, enviar } from './api.ts'
 
-/** Antecedência mínima para agendar, em minutos. */
-export const ANTECEDENCIA_AGENDAR_MIN = 30
-/** O cliente só pode cancelar até esse tempo antes do horário, em minutos. */
+/** O cliente só pode cancelar até esse tempo antes do horário, em minutos (o backend confere). */
 export const ANTECEDENCIA_CANCELAMENTO_MIN = 120
 
 export function inicioAgendamento(agendamento: Pick<Agendamento, 'data' | 'hora'>): Date {
@@ -32,117 +23,30 @@ export function inicioAgendamento(agendamento: Pick<Agendamento, 'data' | 'hora'
   return data
 }
 
-function barbeiroLivre(
-  agendamentos: Agendamento[],
-  data: string,
-  barbeiroId: string,
-  inicio: number,
-  duracao: number,
-): boolean {
-  return !agendamentos.some((a) => {
-    if (a.status !== 'confirmado' || a.data !== data || a.barbeiroId !== barbeiroId) return false
-    const inicioOutro = horaParaMinutos(a.hora)
-    return inicio < inicioOutro + a.duracaoMin && inicioOutro < inicio + duracao
-  })
-}
-
-function candidatos(barbeiros: Barbeiro[], barbeiroId: string): string[] {
-  return barbeiroId === SEM_PREFERENCIA ? barbeiros.map((b) => b.id) : [barbeiroId]
-}
+export const obterFuncionamento = () => api<Funcionamento>('/funcionamento')
 
 /** Indica se a barbearia abre nesse dia. */
-export function diaAberto(data: Date): boolean {
-  return funcionamentoExemplo[data.getDay()] !== null
-}
+export const diaAberto = (data: Date, funcionamento: Funcionamento) =>
+  funcionamento.dias[data.getDay()] != null
 
 /** Serviços disponíveis para agendar (só os ativos). */
-export async function listarServicos(): Promise<Servico[]> {
-  await esperar()
-  return lerBanco().servicos.filter((s) => s.ativo)
+export const listarServicos = () => api<Servico[]>('/servicos')
+
+export const listarBarbeiros = () => api<Barbeiro[]>('/barbeiros')
+
+export function listarHorarios(data: string, servicoId: string, barbeiroId: string) {
+  const busca = new URLSearchParams({ data, servico: servicoId, barbeiro: barbeiroId })
+  return api<Horario[]>(`/horarios?${busca}`)
 }
 
-export async function listarBarbeiros(): Promise<Barbeiro[]> {
-  await esperar()
-  return lerBanco().barbeiros
-}
+export const criarAgendamento = (novo: NovoAgendamento) => api<Agendamento>('/agendamentos', enviar(novo))
 
-export async function listarHorarios(
-  data: string,
-  servicoId: string,
-  barbeiroId: string,
-): Promise<Horario[]> {
-  await esperar()
+export const listarMeusAgendamentos = () => api<Agendamento[]>('/agendamentos/meus')
 
-  const { servicos, barbeiros, agendamentos } = lerBanco()
-  const servico = servicos.find((s) => s.id === servicoId)
-  const expediente = funcionamentoExemplo[deIso(data).getDay()]
-  if (!servico || !expediente) return []
-
-  const limite = Date.now() + ANTECEDENCIA_AGENDAR_MIN * 60_000
-  const horarios: Horario[] = []
-  for (let m = expediente.abre; m + servico.duracaoMin <= expediente.fecha; m += INTERVALO_MIN) {
-    const hora = minutosParaHora(m)
-    const disponivel =
-      inicioAgendamento({ data, hora }).getTime() >= limite &&
-      candidatos(barbeiros, barbeiroId).some((id) =>
-        barbeiroLivre(agendamentos, data, id, m, servico.duracaoMin),
-      )
-    horarios.push({ hora, disponivel })
-  }
-  return horarios
-}
-
-export async function criarAgendamento(
-  novo: NovoAgendamento,
-  usuario: Usuario,
-): Promise<Agendamento> {
-  await esperar()
-
-  return alterarBanco((banco) => {
-    const servico = banco.servicos.find((s) => s.id === novo.servicoId && s.ativo)
-    if (!servico) throw new Error('Este serviço não está mais disponível.')
-
-    if (inicioAgendamento(novo).getTime() < Date.now() + ANTECEDENCIA_AGENDAR_MIN * 60_000) {
-      throw new Error('Esse horário não está mais disponível. Escolha outro horário.')
-    }
-
-    const inicio = horaParaMinutos(novo.hora)
-    const barbeiroId = candidatos(banco.barbeiros, novo.barbeiroId).find((id) =>
-      barbeiroLivre(banco.agendamentos, novo.data, id, inicio, servico.duracaoMin),
-    )
-    if (!barbeiroId) {
-      throw new Error('Esse horário acabou de ser ocupado. Escolha outro horário.')
-    }
-
-    const agendamento: Agendamento = {
-      id: `JR-${crypto.randomUUID().slice(0, 6).toUpperCase()}`,
-      clienteId: usuario.id,
-      servicoId: servico.id,
-      servicoNome: servico.nome,
-      barbeiroId,
-      data: novo.data,
-      hora: novo.hora,
-      duracaoMin: servico.duracaoMin,
-      cliente: novo.cliente,
-      status: 'confirmado',
-      criadoEm: new Date().toISOString(),
-    }
-    banco.agendamentos.push(agendamento)
-
-    // Contas do Google chegam sem telefone: guarda o informado no agendamento.
-    const conta = banco.usuarios.find((u) => u.id === usuario.id)
-    if (conta && !conta.telefone) conta.telefone = novo.cliente.telefone
-
-    return agendamento
-  })
-}
-
-export async function listarMeusAgendamentos(usuarioId: string): Promise<Agendamento[]> {
-  await esperar()
-  return lerBanco().agendamentos.filter((a) => a.clienteId === usuarioId)
-}
-
-/** Regra do cliente: só agendamentos confirmados e com antecedência mínima. */
+/**
+ * Regra do cliente: só agendamentos confirmados e com antecedência mínima.
+ * Serve para mostrar ou esconder o botão; quem decide de verdade é o backend.
+ */
 export function podeCancelar(agendamento: Agendamento, agora = new Date()): boolean {
   return (
     agendamento.status === 'confirmado' &&
@@ -151,24 +55,6 @@ export function podeCancelar(agendamento: Agendamento, agora = new Date()): bool
   )
 }
 
-export async function cancelarAgendamento(id: string, usuario: Usuario): Promise<void> {
-  await esperar()
-
-  alterarBanco((banco) => {
-    const agendamento = banco.agendamentos.find((a) => a.id === id)
-    // O cliente só enxerga os próprios agendamentos.
-    if (!agendamento || (usuario.papel === 'cliente' && agendamento.clienteId !== usuario.id)) {
-      throw new Error('Agendamento não encontrado.')
-    }
-    if (agendamento.status !== 'confirmado') {
-      throw new Error('Este agendamento já foi cancelado.')
-    }
-    if (usuario.papel === 'cliente' && !podeCancelar(agendamento)) {
-      throw new Error(
-        `O cancelamento só pode ser feito até ${ANTECEDENCIA_CANCELAMENTO_MIN / 60} horas antes do horário.`,
-      )
-    }
-    agendamento.status = 'cancelado'
-    agendamento.canceladoPor = usuario.papel
-  })
-}
+/** Cliente cancela os próprios agendamentos; o dono pode cancelar qualquer um. */
+export const cancelarAgendamento = (id: string) =>
+  api<void>(`/agendamentos/${encodeURIComponent(id)}/cancelar`, { method: 'POST' })

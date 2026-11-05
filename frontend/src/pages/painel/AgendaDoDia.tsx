@@ -2,13 +2,13 @@ import { CalendarX, ChevronLeft, ChevronRight, MessageCircle, Phone, StoreIcon }
 import { useState } from 'react'
 import CancelarAgendamento from '../../components/CancelarAgendamento.tsx'
 import { ErroCarregamento, Esqueleto } from '../../components/agendamento/Estados.tsx'
-import { useUsuarioLogado } from '../../contexts/auth.ts'
 import { useRecurso } from '../../hooks/useRecurso.ts'
 import {
   cancelarAgendamento,
   diaAberto,
   inicioAgendamento,
   listarBarbeiros,
+  obterFuncionamento,
 } from '../../services/agendamentoApi.ts'
 import { agendaDoDia } from '../../services/painelApi.ts'
 import { deIso, formatarDataLonga, horaParaMinutos, minutosParaHora, paraIso } from '../../utils/datas.ts'
@@ -24,7 +24,6 @@ function somarDias(iso: string, dias: number): string {
 const apenasDigitos = (telefone: string) => telefone.replace(/\D/g, '')
 
 export default function AgendaDoDia() {
-  const usuario = useUsuarioLogado()
   // Capturados uma vez ao abrir a tela (não a cada renderização).
   const [agora] = useState(() => Date.now())
   const hoje = paraIso(new Date(agora))
@@ -33,12 +32,14 @@ export default function AgendaDoDia() {
 
   const agenda = useRecurso(`agenda|${data}`, () => agendaDoDia(data))
   const barbeiros = useRecurso('barbeiros', listarBarbeiros)
+  const funcionamento = useRecurso('funcionamento', obterFuncionamento)
   const nomeBarbeiro = (id: string) => barbeiros.dados?.find((b) => b.id === id)?.nome ?? '—'
 
   const doBarbeiro = (agenda.dados ?? []).filter((a) => barbeiro === TODOS || a.barbeiroId === barbeiro)
   const confirmados = doBarbeiro.filter((a) => a.status === 'confirmado')
   const cancelados = doBarbeiro.length - confirmados.length
-  const aberto = diaAberto(deIso(data))
+  // Enquanto o horário de funcionamento não chega, trata o dia como aberto.
+  const aberto = funcionamento.dados ? diaAberto(deIso(data), funcionamento.dados) : true
 
   return (
     <div className="agenda">
@@ -154,7 +155,7 @@ export default function AgendaDoDia() {
                   {!cancelado && futuro && (
                     <CancelarAgendamento
                       onConfirmar={async () => {
-                        await cancelarAgendamento(a.id, usuario)
+                        await cancelarAgendamento(a.id)
                         agenda.recarregar()
                       }}
                     />

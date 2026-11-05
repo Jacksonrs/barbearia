@@ -6,9 +6,11 @@ import Campo from '../components/Campo.tsx'
 import CarregandoPagina from '../components/CarregandoPagina.tsx'
 import InputSenha from '../components/InputSenha.tsx'
 import { destinoAposEntrar, useAuth } from '../contexts/auth.ts'
-import { donoExemplo } from '../services/dadosExemplo.ts'
 import type { TipoLogin } from '../types/usuario.ts'
 import { formatarTelefone } from '../utils/cliente.ts'
+
+/** Conta do dono criada pelo seed do backend (só aparece em desenvolvimento). */
+const CONTA_DEMO = { email: 'dono@jrbarber.com', senha: 'jrbarber123' }
 
 const opcoes: { tipo: TipoLogin; rotulo: string; icone: typeof Mail }[] = [
   { tipo: 'email', rotulo: 'E-mail', icone: Mail },
@@ -171,7 +173,7 @@ export default function Entrar() {
           {import.meta.env.DEV && (
             <p className="nota-demo">
               <strong>Demonstração:</strong> acesso do dono com{' '}
-              <code>{donoExemplo.email}</code> e senha <code>{donoExemplo.senha}</code>.
+              <code>{CONTA_DEMO.email}</code> e senha <code>{CONTA_DEMO.senha}</code>.
             </p>
           )}
         </div>

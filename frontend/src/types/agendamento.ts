@@ -24,6 +24,16 @@ export type Horario = {
   disponivel: boolean
 }
 
+/** Horário de funcionamento da barbearia (GET /api/funcionamento). */
+export type Funcionamento = {
+  /** Intervalo entre um horário e outro na agenda, em minutos. */
+  intervaloMin: number
+  /** Quantos dias à frente o cliente pode agendar (a partir de hoje). */
+  diasAgendamento: number
+  /** Um item por dia da semana (0 = domingo, igual ao getDay()); null = fechado. */
+  dias: ({ abre: string; fecha: string } | null)[]
+}
+
 export type DadosCliente = {
   nome: string
   telefone: string

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import App from '../src/App.tsx'
 import { listarHorarios } from '../src/services/agendamentoApi.ts'
 import * as authApi from '../src/services/authApi.ts'
-import { donoExemplo } from '../src/services/dadosExemplo.ts'
+import { donoExemplo } from './dados/dadosExemplo.ts'
 import { SEM_PREFERENCIA } from '../src/types/agendamento.ts'
 import { paraIso } from '../src/utils/datas.ts'
 

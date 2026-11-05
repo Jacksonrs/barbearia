@@ -1,7 +1,7 @@
 import { CalendarDays, CalendarX } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useRecurso } from '../../hooks/useRecurso.ts'
-import { diaAberto, listarHorarios } from '../../services/agendamentoApi.ts'
+import { diaAberto, listarHorarios, obterFuncionamento } from '../../services/agendamentoApi.ts'
 import type { Horario } from '../../types/agendamento.ts'
 import {
   formatarDataLonga,
@@ -11,8 +11,6 @@ import {
   proximosDias,
 } from '../../utils/datas.ts'
 import { ErroCarregamento, Esqueleto } from './Estados.tsx'
-
-const DIAS_VISIVEIS = 14
 
 type Props = {
   servicoId: string
@@ -32,8 +30,14 @@ function agrupar(horarios: Horario[]) {
 }
 
 export default function EtapaHorario({ servicoId, barbeiroId, data, hora, onData, onHora }: Props) {
-  const dias = useMemo(() => proximosDias(DIAS_VISIVEIS), [])
-  const hoje = paraIso(dias[0])
+  // Dias abertos e quantos dias à frente dá para agendar vêm do backend.
+  const funcionamento = useRecurso('funcionamento', obterFuncionamento)
+  const dias = useMemo(
+    () => (funcionamento.dados ? proximosDias(funcionamento.dados.diasAgendamento) : []),
+    [funcionamento.dados],
+  )
+  // Capturado uma vez ao abrir a etapa (não a cada renderização).
+  const [hoje] = useState(() => paraIso(new Date()))
 
   const horarios = useRecurso(data ? `${data}|${servicoId}|${barbeiroId}` : null, () =>
     listarHorarios(data ?? '', servicoId, barbeiroId),
@@ -45,10 +49,14 @@ export default function EtapaHorario({ servicoId, barbeiroId, data, hora, onData
     <div className="horario">
       <fieldset className="grupo">
         <legend className="grupo-titulo">Dia</legend>
-        <div className="dias">
+        {funcionamento.carregando && <Esqueleto quantidade={7} className="dias" />}
+        {funcionamento.erro && (
+          <ErroCarregamento mensagem={funcionamento.erro} onTentarNovamente={funcionamento.recarregar} />
+        )}
+        <div className="dias" hidden={!funcionamento.dados}>
           {dias.map((dia) => {
             const iso = paraIso(dia)
-            const aberto = diaAberto(dia)
+            const aberto = funcionamento.dados ? diaAberto(dia, funcionamento.dados) : false
             return (
               <label key={iso} className={`dia${aberto ? '' : ' dia--fechado'}`}>
                 <input

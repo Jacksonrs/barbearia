@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { criarAgendamento, listarServicos } from '../src/services/agendamentoApi.ts'
 import * as authApi from '../src/services/authApi.ts'
-import { donoExemplo } from '../src/services/dadosExemplo.ts'
+import { donoExemplo } from './dados/dadosExemplo.ts'
 import { SEM_PREFERENCIA } from '../src/types/agendamento.ts'
 import {
   CLIENTE,
@@ -79,7 +79,6 @@ describe('Meus agendamentos', () => {
         hora,
         cliente: { nome: cliente.nome, telefone: cliente.telefone, email: '', observacao: '' },
       },
-      cliente,
     )
 
     const usuario = await renderizar('/meus-agendamentos')
@@ -110,7 +109,6 @@ describe('Painel do dono', () => {
         hora,
         cliente: { nome: cliente.nome, telefone: cliente.telefone, email: '', observacao: 'Degradê baixo' },
       },
-      cliente,
     )
     await entrarComoDono()
 

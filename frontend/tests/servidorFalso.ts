@@ -1,13 +1,45 @@
 /**
- * Backend falso para os testes: responde às rotas /api/auth como o FastAPI
- * (mesmos status e mensagens), guardando as contas no banco de exemplo.
- * A sessão (o "cookie") fica numa variável e é zerada antes de cada teste.
+ * Backend falso para os testes: responde às rotas /api como o FastAPI
+ * (mesmos caminhos, status e mensagens), usando o banco em memória de tests/dados.
+ * A sessão (o "cookie") fica numa variável. Tudo é zerado antes de cada teste.
  */
 import { vi } from 'vitest'
-import { alterarBanco, lerBanco, type UsuarioArmazenado } from '../src/services/armazenamento.ts'
+import { inicioAgendamento, podeCancelar } from '../src/services/agendamentoApi.ts'
+import type { DadosServico } from '../src/services/painelApi.ts'
+import {
+  SEM_PREFERENCIA,
+  type Agendamento,
+  type Funcionamento,
+  type Horario,
+  type NovoAgendamento,
+  type Servico,
+} from '../src/types/agendamento.ts'
 import type { Credenciais, DadosCadastro, Usuario } from '../src/types/usuario.ts'
+import { deIso, horaParaMinutos, minutosParaHora } from '../src/utils/datas.ts'
+import { lerBanco, zerarBanco, type UsuarioArmazenado } from './dados/armazenamento.ts'
+import { funcionamentoExemplo, INTERVALO_MIN } from './dados/dadosExemplo.ts'
+
+const ANTECEDENCIA_AGENDAR_MIN = 30
+const DIAS_AGENDAMENTO = 14
 
 let sessao: string | null = null
+
+// ----- Respostas -----
+
+class Falha extends Error {
+  readonly status: number
+
+  constructor(status: number, mensagem: string) {
+    super(mensagem)
+    this.status = status
+  }
+}
+
+const json = (corpo: unknown, status = 200) =>
+  new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })
+const semConteudo = () => new Response(null, { status: 204 })
+
+// ----- Contas -----
 
 const digitos = (texto: string) => texto.replace(/\D/g, '')
 const normalizarEmail = (email: string) => email.trim().toLowerCase()
@@ -16,9 +48,17 @@ function publico({ senha: _senha, ...usuario }: UsuarioArmazenado): Usuario {
   return usuario
 }
 
-const json = (corpo: unknown, status = 200) =>
-  new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })
-const erro = (status: number, detail: string) => json({ detail }, status)
+function usuarioLogado(): UsuarioArmazenado {
+  const usuario = lerBanco().usuarios.find((u) => u.id === sessao)
+  if (!usuario) throw new Falha(401, 'Faça login para continuar.')
+  return usuario
+}
+
+function apenasDono() {
+  if (usuarioLogado().papel !== 'dono') {
+    throw new Falha(403, 'Esta área é exclusiva da administração da barbearia.')
+  }
+}
 
 function entrar({ tipo, identificador, senha }: Credenciais) {
   const usuario = lerBanco().usuarios.find((u) =>
@@ -27,7 +67,7 @@ function entrar({ tipo, identificador, senha }: Credenciais) {
       : u.telefone !== '' && digitos(u.telefone) === digitos(identificador),
   )
   if (!usuario || usuario.senha === null || usuario.senha !== senha) {
-    return erro(401, tipo === 'email' ? 'E-mail ou senha incorretos.' : 'Telefone ou senha incorretos.')
+    throw new Falha(401, tipo === 'email' ? 'E-mail ou senha incorretos.' : 'Telefone ou senha incorretos.')
   }
   sessao = usuario.id
   return json(publico(usuario))
@@ -38,10 +78,10 @@ function cadastrar(dados: DadosCadastro) {
   const email = normalizarEmail(dados.email)
   const { usuarios } = lerBanco()
   if (usuarios.some((u) => u.telefone !== '' && digitos(u.telefone) === telefone)) {
-    return erro(409, 'Já existe uma conta com este telefone. Tente entrar.')
+    throw new Falha(409, 'Já existe uma conta com este telefone. Tente entrar.')
   }
   if (email && usuarios.some((u) => u.email !== '' && normalizarEmail(u.email) === email)) {
-    return erro(409, 'Já existe uma conta com este e-mail. Tente entrar.')
+    throw new Falha(409, 'Já existe uma conta com este e-mail. Tente entrar.')
   }
 
   const nova: UsuarioArmazenado = {
@@ -53,37 +93,208 @@ function cadastrar(dados: DadosCadastro) {
     provedor: 'senha',
     senha: dados.senha,
   }
-  alterarBanco((banco) => {
-    banco.usuarios.push(nova)
-  })
+  usuarios.push(nova)
   sessao = nova.id
   return json(publico(nova), 201)
 }
 
-async function responder(entrada: RequestInfo | URL, opcoes: RequestInit = {}): Promise<Response> {
-  const caminho = new URL(String(entrada), 'http://localhost').pathname
-  const metodo = opcoes.method ?? 'GET'
-  const corpo = typeof opcoes.body === 'string' ? JSON.parse(opcoes.body) : undefined
+// ----- Agenda -----
 
-  switch (`${metodo} ${caminho}`) {
-    case 'GET /api/auth/eu': {
-      const usuario = lerBanco().usuarios.find((u) => u.id === sessao)
-      return usuario ? json(publico(usuario)) : erro(401, 'Faça login para continuar.')
-    }
-    case 'POST /api/auth/entrar':
-      return entrar(corpo)
-    case 'POST /api/auth/cadastro':
-      return cadastrar(corpo)
-    case 'POST /api/auth/sair':
-      sessao = null
-      return new Response(null, { status: 204 })
-    default:
-      return erro(404, `Rota não simulada nos testes: ${metodo} ${caminho}`)
+function funcionamento(): Funcionamento {
+  return {
+    intervaloMin: INTERVALO_MIN,
+    diasAgendamento: DIAS_AGENDAMENTO,
+    dias: funcionamentoExemplo.map((e) =>
+      e ? { abre: minutosParaHora(e.abre), fecha: minutosParaHora(e.fecha) } : null,
+    ),
   }
 }
 
-/** Liga o backend falso (no lugar do fetch) e começa sem ninguém logado. */
+function barbeiroLivre(data: string, barbeiroId: string, inicio: number, duracao: number) {
+  return !lerBanco().agendamentos.some((a) => {
+    if (a.status !== 'confirmado' || a.data !== data || a.barbeiroId !== barbeiroId) return false
+    const inicioOutro = horaParaMinutos(a.hora)
+    return inicio < inicioOutro + a.duracaoMin && inicioOutro < inicio + duracao
+  })
+}
+
+const candidatos = (barbeiroId: string) =>
+  barbeiroId === SEM_PREFERENCIA ? lerBanco().barbeiros.map((b) => b.id) : [barbeiroId]
+
+function listarHorarios(data: string, servicoId: string, barbeiroId: string): Horario[] {
+  const servico = lerBanco().servicos.find((s) => s.id === servicoId && s.ativo)
+  const expediente = funcionamentoExemplo[deIso(data).getDay()]
+  if (!servico || !expediente) return []
+
+  const limite = Date.now() + ANTECEDENCIA_AGENDAR_MIN * 60_000
+  const horarios: Horario[] = []
+  for (let m = expediente.abre; m + servico.duracaoMin <= expediente.fecha; m += INTERVALO_MIN) {
+    const hora = minutosParaHora(m)
+    const disponivel =
+      inicioAgendamento({ data, hora }).getTime() >= limite &&
+      candidatos(barbeiroId).some((id) => barbeiroLivre(data, id, m, servico.duracaoMin))
+    horarios.push({ hora, disponivel })
+  }
+  return horarios
+}
+
+function criarAgendamento(novo: NovoAgendamento) {
+  const usuario = usuarioLogado()
+  const servico = lerBanco().servicos.find((s) => s.id === novo.servicoId && s.ativo)
+  if (!servico) throw new Falha(400, 'Este serviço não está mais disponível.')
+  if (inicioAgendamento(novo).getTime() < Date.now() + ANTECEDENCIA_AGENDAR_MIN * 60_000) {
+    throw new Falha(409, 'Esse horário não está mais disponível. Escolha outro horário.')
+  }
+
+  const inicio = horaParaMinutos(novo.hora)
+  const barbeiroId = candidatos(novo.barbeiroId).find((id) =>
+    barbeiroLivre(novo.data, id, inicio, servico.duracaoMin),
+  )
+  if (!barbeiroId) throw new Falha(409, 'Esse horário acabou de ser ocupado. Escolha outro horário.')
+
+  const agendamento: Agendamento = {
+    id: `JR-${crypto.randomUUID().slice(0, 6).toUpperCase()}`,
+    clienteId: usuario.id,
+    servicoId: servico.id,
+    servicoNome: servico.nome,
+    barbeiroId,
+    data: novo.data,
+    hora: novo.hora,
+    duracaoMin: servico.duracaoMin,
+    cliente: novo.cliente,
+    status: 'confirmado',
+    criadoEm: new Date().toISOString(),
+  }
+  lerBanco().agendamentos.push(agendamento)
+  return json(agendamento, 201)
+}
+
+function cancelarAgendamento(id: string) {
+  const usuario = usuarioLogado()
+  const agendamento = lerBanco().agendamentos.find((a) => a.id === id)
+  if (!agendamento || (usuario.papel === 'cliente' && agendamento.clienteId !== usuario.id)) {
+    throw new Falha(404, 'Agendamento não encontrado.')
+  }
+  if (agendamento.status !== 'confirmado') throw new Falha(409, 'Este agendamento já foi cancelado.')
+  if (usuario.papel === 'cliente' && !podeCancelar(agendamento)) {
+    throw new Falha(400, 'O cancelamento só pode ser feito até 2 horas antes do horário.')
+  }
+  agendamento.status = 'cancelado'
+  agendamento.canceladoPor = usuario.papel
+  return semConteudo()
+}
+
+// ----- Painel -----
+
+function gerarId(nome: string, existentes: Servico[]): string {
+  const base =
+    nome
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'servico'
+  let id = base
+  for (let n = 2; existentes.some((s) => s.id === id); n++) id = `${base}-${n}`
+  return id
+}
+
+function salvarServico(dados: DadosServico, id?: string) {
+  const { servicos } = lerBanco()
+  const nome = dados.nome.trim()
+  const descricao = dados.descricao.trim()
+  if (servicos.some((s) => s.id !== id && s.nome.toLowerCase() === nome.toLowerCase())) {
+    throw new Falha(409, 'Já existe um serviço com esse nome.')
+  }
+
+  if (id) {
+    const servico = servicos.find((s) => s.id === id)
+    if (!servico) throw new Falha(404, 'Serviço não encontrado.')
+    Object.assign(servico, { ...dados, nome, descricao })
+    return json(servico)
+  }
+  const novo: Servico = { ...dados, nome, descricao, id: gerarId(nome, servicos) }
+  servicos.push(novo)
+  return json(novo, 201)
+}
+
+// ----- Rotas -----
+
+function rotear(metodo: string, url: URL, corpo: any): Response {
+  const caminho = url.pathname.replace(/^\/api/, '')
+  const busca = url.searchParams
+  const rota = `${metodo} ${caminho}`
+
+  switch (rota) {
+    case 'GET /auth/eu':
+      return json(publico(usuarioLogado()))
+    case 'POST /auth/entrar':
+      return entrar(corpo)
+    case 'POST /auth/cadastro':
+      return cadastrar(corpo)
+    case 'POST /auth/sair':
+      sessao = null
+      return semConteudo()
+
+    case 'GET /servicos':
+      return json(lerBanco().servicos.filter((s) => s.ativo))
+    case 'GET /barbeiros':
+      return json(lerBanco().barbeiros)
+    case 'GET /funcionamento':
+      return json(funcionamento())
+    case 'GET /horarios':
+      return json(
+        listarHorarios(busca.get('data')!, busca.get('servico')!, busca.get('barbeiro') ?? SEM_PREFERENCIA),
+      )
+
+    case 'POST /agendamentos':
+      return criarAgendamento(corpo)
+    case 'GET /agendamentos/meus': {
+      const { id } = usuarioLogado()
+      return json(lerBanco().agendamentos.filter((a) => a.clienteId === id))
+    }
+
+    case 'GET /painel/agenda':
+      apenasDono()
+      return json(
+        lerBanco()
+          .agendamentos.filter((a) => a.data === busca.get('data'))
+          .sort((a, b) => a.hora.localeCompare(b.hora)),
+      )
+    case 'GET /painel/servicos':
+      apenasDono()
+      return json(lerBanco().servicos)
+    case 'POST /painel/servicos':
+      apenasDono()
+      return salvarServico(corpo)
+  }
+
+  const cancelar = rota.match(/^POST \/agendamentos\/([^/]+)\/cancelar$/)
+  if (cancelar) return cancelarAgendamento(decodeURIComponent(cancelar[1]))
+
+  const editar = rota.match(/^PUT \/painel\/servicos\/([^/]+)$/)
+  if (editar) {
+    apenasDono()
+    return salvarServico(corpo, decodeURIComponent(editar[1]))
+  }
+
+  throw new Falha(404, `Rota não simulada nos testes: ${rota}`)
+}
+
+async function responder(entrada: RequestInfo | URL, opcoes: RequestInit = {}): Promise<Response> {
+  const url = new URL(String(entrada), 'http://localhost')
+  const corpo = typeof opcoes.body === 'string' ? JSON.parse(opcoes.body) : undefined
+  try {
+    return rotear(opcoes.method ?? 'GET', url, corpo)
+  } catch (e) {
+    if (e instanceof Falha) return json({ detail: e.message }, e.status)
+    throw e
+  }
+}
+
+/** Liga o backend falso (no lugar do fetch), com os dados de exemplo e ninguém logado. */
 export function iniciarServidorFalso() {
+  zerarBanco()
   sessao = null
   vi.stubGlobal('fetch', vi.fn(responder))
 }

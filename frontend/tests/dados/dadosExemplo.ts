@@ -1,11 +1,10 @@
 /**
- * DADOS DE EXEMPLO — usados enquanto o backend não está pronto.
- * Nomes, serviços, horários, clientes e a conta do dono são fictícios e devem
- * ser substituídos pelos dados reais da Jr Barber (vindos da API).
+ * Dados de exemplo do backend falso dos testes (os mesmos do seed do backend).
+ * Nomes, serviços, horários e clientes são fictícios.
  */
-import type { Agendamento, Barbeiro, Servico } from '../types/agendamento.ts'
-import { minutosParaHora, paraIso } from '../utils/datas.ts'
-import { hash } from '../utils/hash.ts'
+import type { Agendamento, Barbeiro, Servico } from '../../src/types/agendamento.ts'
+import { minutosParaHora, paraIso } from '../../src/utils/datas.ts'
+import { hash } from './hash.ts'
 
 export const servicosExemplo: Servico[] = [
   {
@@ -37,7 +36,7 @@ export const barbeirosExemplo: Barbeiro[] = [
   { id: 'lucas', nome: 'Lucas', especialidade: 'Cortes modernos' },
 ]
 
-/** Conta do dono para testes. Em produção, isso vem do backend. */
+/** Conta do dono (a mesma criada pelo seed do backend). */
 export const donoExemplo = {
   id: 'dono',
   nome: 'Administrador',
