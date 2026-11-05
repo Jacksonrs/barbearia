@@ -2,8 +2,9 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
-from .. import config
+from .. import config, limite_login
 from ..conversores import usuario_saida
 from ..dependencias import DB, TokenSessao, UsuarioLogado
 from ..models import Usuario
@@ -19,11 +20,13 @@ def cadastrar(dados: DadosCadastro, db: DB, resposta: Response):
     telefone_digitos = digitos(dados.telefone)
     email = normalizar_email(dados.email) or None
 
-    if db.scalar(select(Usuario).where(Usuario.telefone_digitos == telefone_digitos)):
-        raise HTTPException(status.HTTP_409_CONFLICT, "Já existe uma conta com este telefone. Tente entrar.")
-    if email and db.scalar(select(Usuario).where(Usuario.email == email)):
-        raise HTTPException(status.HTTP_409_CONFLICT, "Já existe uma conta com este e-mail. Tente entrar.")
+    def conferir_duplicado():
+        if db.scalar(select(Usuario).where(Usuario.telefone_digitos == telefone_digitos)):
+            raise HTTPException(status.HTTP_409_CONFLICT, "Já existe uma conta com este telefone. Tente entrar.")
+        if email and db.scalar(select(Usuario).where(Usuario.email == email)):
+            raise HTTPException(status.HTTP_409_CONFLICT, "Já existe uma conta com este e-mail. Tente entrar.")
 
+    conferir_duplicado()
     usuario = Usuario(
         id=str(uuid.uuid4()),
         nome=dados.nome,
@@ -36,7 +39,13 @@ def cadastrar(dados: DadosCadastro, db: DB, resposta: Response):
         criado_em=agora_utc(),
     )
     db.add(usuario)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Outro cadastro com o mesmo telefone/e-mail terminou entre a conferência e o commit.
+        db.rollback()
+        conferir_duplicado()
+        raise
     abrir_sessao(db, usuario, resposta)
     return usuario_saida(usuario)
 
@@ -44,17 +53,28 @@ def cadastrar(dados: DadosCadastro, db: DB, resposta: Response):
 @rota.post("/entrar", response_model=UsuarioSaida)
 def entrar(credenciais: Credenciais, db: DB, resposta: Response):
     if credenciais.tipo == "email":
-        filtro = Usuario.email == normalizar_email(credenciais.identificador)
+        identificador = normalizar_email(credenciais.identificador)
+        filtro = Usuario.email == identificador
         mensagem = "E-mail ou senha incorretos."
     else:
-        filtro = Usuario.telefone_digitos == digitos(credenciais.identificador)
+        identificador = digitos(credenciais.identificador)
+        filtro = Usuario.telefone_digitos == identificador
         mensagem = "Telefone ou senha incorretos."
+
+    chave = f"{credenciais.tipo}:{identificador}"
+    if minutos := limite_login.minutos_bloqueado(chave):
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            f"Muitas tentativas de login. Tente novamente em {minutos} min.",
+        )
 
     usuario = db.scalar(select(Usuario).where(filtro))
     # Mensagem igual para "não existe" e "senha errada": não revela quais contas existem.
     if not conferir_senha(usuario.senha_hash if usuario else None, credenciais.senha):
+        limite_login.registrar_falha(chave)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, mensagem)
 
+    limite_login.registrar_sucesso(chave)
     abrir_sessao(db, usuario, resposta)
     return usuario_saida(usuario)
 
@@ -97,7 +117,17 @@ def entrar_com_google(dados: LoginGoogle, db: DB, resposta: Response):
             criado_em=agora_utc(),
         )
         db.add(usuario)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # Dois logins simultâneos da mesma conta Google: usa a que foi criada primeiro.
+            db.rollback()
+            usuario = db.scalar(select(Usuario).where(Usuario.google_sub == sub))
+            if not usuario:
+                raise HTTPException(
+                    status.HTTP_409_CONFLICT,
+                    "Já existe uma conta com este e-mail. Entre com e-mail e senha.",
+                )
 
     abrir_sessao(db, usuario, resposta)
     return usuario_saida(usuario)

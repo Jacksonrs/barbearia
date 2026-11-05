@@ -4,7 +4,7 @@ import secrets
 from datetime import timedelta
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerificationError
+from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi import Response
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
@@ -25,7 +25,8 @@ def gerar_hash_senha(senha: str) -> str:
 def conferir_senha(senha_hash: str | None, senha: str) -> bool:
     try:
         return _hasher.verify(senha_hash or _HASH_FALSO, senha) and senha_hash is not None
-    except VerificationError:
+    except (VerificationError, InvalidHashError):
+        # Hash corrompido no banco conta como senha errada (e não como erro 500).
         return False
 
 
