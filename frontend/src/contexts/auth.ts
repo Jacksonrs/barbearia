@@ -3,10 +3,12 @@ import type { Credenciais, DadosCadastro, Usuario } from '../types/usuario.ts'
 
 export type ContextoAuth = {
   usuario: Usuario | null
+  /** true enquanto pergunta ao backend quem está logado (ao abrir o site). */
+  carregando: boolean
   entrar: (credenciais: Credenciais) => Promise<Usuario>
   entrarComGoogle: () => Promise<Usuario>
   cadastrar: (dados: DadosCadastro) => Promise<Usuario>
-  sair: () => void
+  sair: () => Promise<void>
 }
 
 export const AuthContext = createContext<ContextoAuth | null>(null)

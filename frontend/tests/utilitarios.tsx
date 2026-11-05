@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { act, render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from '../src/App.tsx'
@@ -8,12 +8,14 @@ import { donoExemplo } from '../src/services/dadosExemplo.ts'
 import { SEM_PREFERENCIA } from '../src/types/agendamento.ts'
 import { paraIso } from '../src/utils/datas.ts'
 
-export function renderizar(rota = '/') {
+/** Abre o site na rota e espera a conferência da sessão (GET /api/auth/eu) terminar. */
+export async function renderizar(rota = '/') {
   render(
     <MemoryRouter initialEntries={[rota]}>
       <App />
     </MemoryRouter>,
   )
+  await act(() => new Promise((resolver) => setTimeout(resolver, 0)))
   return userEvent.setup()
 }
 

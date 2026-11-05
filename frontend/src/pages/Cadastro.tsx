@@ -3,13 +3,14 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import BotaoGoogle from '../components/BotaoGoogle.tsx'
 import Campo from '../components/Campo.tsx'
+import CarregandoPagina from '../components/CarregandoPagina.tsx'
 import InputSenha from '../components/InputSenha.tsx'
 import { destinoAposEntrar, useAuth } from '../contexts/auth.ts'
 import type { DadosCadastro } from '../types/usuario.ts'
 import { formatarTelefone, SENHA_MINIMA, validarCadastro } from '../utils/cliente.ts'
 
 export default function Cadastro() {
-  const { usuario, cadastrar, entrarComGoogle } = useAuth()
+  const { usuario, carregando, cadastrar, entrarComGoogle } = useAuth()
   const [parametros] = useSearchParams()
   const voltar = parametros.get('voltar')
 
@@ -18,6 +19,7 @@ export default function Cadastro() {
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState<'senha' | 'google' | null>(null)
 
+  if (carregando) return <CarregandoPagina />
   if (usuario) return <Navigate to={destinoAposEntrar(usuario, voltar)} replace />
 
   const erros = validarCadastro(dados)

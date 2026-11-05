@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/auth.ts'
 import type { Papel } from '../types/usuario.ts'
+import CarregandoPagina from './CarregandoPagina.tsx'
 
 type Props = {
   children: ReactNode
@@ -12,8 +13,11 @@ type Props = {
 
 /** Sem login → manda para /entrar e depois volta. Perfil errado → acesso restrito. */
 export default function RotaProtegida({ children, papel }: Props) {
-  const { usuario } = useAuth()
+  const { usuario, carregando } = useAuth()
   const { pathname, search } = useLocation()
+
+  // Ainda conferindo a sessão: sem isso, quem está logado iria para /entrar ao recarregar.
+  if (carregando) return <CarregandoPagina />
 
   if (!usuario) {
     return <Navigate to={`/entrar?voltar=${encodeURIComponent(pathname + search)}`} replace />

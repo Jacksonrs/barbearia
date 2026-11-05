@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { criarAgendamento, listarServicos } from '../src/services/agendamentoApi.ts'
+import * as authApi from '../src/services/authApi.ts'
 import { donoExemplo } from '../src/services/dadosExemplo.ts'
 import { SEM_PREFERENCIA } from '../src/types/agendamento.ts'
 import {
@@ -13,7 +14,7 @@ import {
 
 describe('Entrar e cadastro', () => {
   it('cria a conta e volta para a página que pediu o login', async () => {
-    const usuario = renderizar('/agendar')
+    const usuario = await renderizar('/agendar')
     await usuario.click(screen.getByRole('link', { name: 'Criar conta' }))
 
     await usuario.type(screen.getByLabelText('Nome completo'), 'João Lima')
@@ -25,7 +26,7 @@ describe('Entrar e cadastro', () => {
   })
 
   it('valida o cadastro antes de enviar', async () => {
-    const usuario = renderizar('/cadastro')
+    const usuario = await renderizar('/cadastro')
     await usuario.click(screen.getByRole('button', { name: 'Criar conta' }))
     expect(screen.getByText('Informe seu nome.')).toBeInTheDocument()
     expect(screen.getByText(/pelo menos 6 caracteres/)).toBeInTheDocument()
@@ -33,9 +34,9 @@ describe('Entrar e cadastro', () => {
 
   it('entra com telefone e senha', async () => {
     await entrarComoCliente()
-    localStorage.removeItem('jrbarber:sessao')
+    await authApi.sair()
 
-    const usuario = renderizar('/entrar')
+    const usuario = await renderizar('/entrar')
     await usuario.click(screen.getByRole('radio', { name: 'Telefone' }))
     await usuario.type(screen.getByLabelText('Telefone', { selector: 'input[type=tel]' }), '11987654321')
     await usuario.type(screen.getByLabelText('Senha'), CLIENTE.senha)
@@ -45,22 +46,22 @@ describe('Entrar e cadastro', () => {
   })
 
   it('mostra erro com senha errada', async () => {
-    const usuario = renderizar('/entrar')
+    const usuario = await renderizar('/entrar')
     await usuario.type(screen.getByLabelText('E-mail', { selector: 'input[type=email]' }), donoExemplo.email)
     await usuario.type(screen.getByLabelText('Senha'), 'errada')
     await usuario.click(screen.getByRole('button', { name: 'Entrar' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('E-mail ou senha incorretos.')
   })
 
-  it('entra com Google', async () => {
-    const usuario = renderizar('/entrar')
-    await usuario.click(screen.getByRole('button', { name: 'Continuar com Google' }))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Meus agendamentos' })).toBeInTheDocument()
+  it('avisa que o login com Google ainda não está configurado', async () => {
+    const usuario = await renderizar('/entrar')
+    await usuario.click(await screen.findByRole('button', { name: 'Continuar com Google' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Login com Google ainda não configurado.')
   })
 
   it('sai da conta', async () => {
     await entrarComoCliente()
-    const usuario = renderizar('/meus-agendamentos')
+    const usuario = await renderizar('/meus-agendamentos')
     await usuario.click(screen.getByRole('button', { name: 'Sair' }))
     expect(screen.getByRole('link', { name: 'Entrar' })).toBeInTheDocument()
   })
@@ -81,7 +82,7 @@ describe('Meus agendamentos', () => {
       cliente,
     )
 
-    const usuario = renderizar('/meus-agendamentos')
+    const usuario = await renderizar('/meus-agendamentos')
     const item = (await screen.findByRole('heading', { level: 3, name: 'Corte' })).closest('li')!
     await usuario.click(within(item).getByRole('button', { name: 'Cancelar agendamento' }))
     await usuario.click(within(item).getByRole('button', { name: 'Sim, cancelar' }))
@@ -94,7 +95,7 @@ describe('Meus agendamentos', () => {
 describe('Painel do dono', () => {
   it('bloqueia o painel para clientes', async () => {
     await entrarComoCliente()
-    renderizar('/painel')
+    await renderizar('/painel')
     expect(screen.getByRole('heading', { level: 1, name: 'Acesso restrito' })).toBeInTheDocument()
   })
 
@@ -113,7 +114,7 @@ describe('Painel do dono', () => {
     )
     await entrarComoDono()
 
-    renderizar('/painel')
+    await renderizar('/painel')
     fireEvent.change(screen.getByLabelText('Data'), { target: { value: data } })
 
     const titulo = await screen.findByRole('heading', { level: 3, name: 'Maria Souza' })
@@ -127,7 +128,7 @@ describe('Painel do dono', () => {
 
   it('cria um serviço que passa a aparecer para os clientes', async () => {
     await entrarComoDono()
-    const usuario = renderizar('/painel/servicos')
+    const usuario = await renderizar('/painel/servicos')
 
     await usuario.click(await screen.findByRole('button', { name: 'Novo serviço' }))
     const form = screen.getByRole('form', { name: 'Novo serviço' })
@@ -142,7 +143,7 @@ describe('Painel do dono', () => {
 
   it('desativa um serviço e ele some do agendamento', async () => {
     await entrarComoDono()
-    const usuario = renderizar('/painel/servicos')
+    const usuario = await renderizar('/painel/servicos')
 
     const item = (await screen.findByRole('heading', { level: 3, name: 'Barba' })).closest('li')!
     await usuario.click(within(item).getByRole('button', { name: 'Desativar' }))

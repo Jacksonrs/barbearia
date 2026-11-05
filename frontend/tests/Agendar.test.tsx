@@ -41,21 +41,21 @@ describe('Agendamento', () => {
   })
 
   it('só permite continuar depois de escolher o serviço', async () => {
-    const usuario = renderizar('/agendar')
+    const usuario = await renderizar('/agendar')
     expect(continuar()).toBeDisabled()
     await usuario.click(await screen.findByRole('radio', { name: 'Corte' }))
     expect(continuar()).toBeEnabled()
   })
 
   it('mostra a escolha no resumo', async () => {
-    const usuario = renderizar('/agendar')
+    const usuario = await renderizar('/agendar')
     await usuario.click(await screen.findByRole('radio', { name: 'Barba' }))
     const resumo = screen.getByRole('complementary', { name: 'Resumo do agendamento' })
     expect(within(resumo).getByText('Barba · 30 min')).toBeInTheDocument()
   })
 
   it('mostra o resumo curto e permite abrir o resumo completo (celular)', async () => {
-    const usuario = renderizar('/agendar')
+    const usuario = await renderizar('/agendar')
     const alternar = screen.getByRole('button', { name: /resumo/i })
     expect(alternar).toHaveTextContent('Nada escolhido ainda')
 
@@ -68,14 +68,14 @@ describe('Agendamento', () => {
   })
 
   it('preenche os dados com a conta do cliente', async () => {
-    const usuario = renderizar('/agendar')
+    const usuario = await renderizar('/agendar')
     await escolherAteDados(usuario)
     expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza')
     expect(screen.getByLabelText('Telefone / WhatsApp')).toHaveValue('(11) 98765-4321')
   })
 
   it('valida os dados do cliente antes de confirmar', async () => {
-    const usuario = renderizar('/agendar')
+    const usuario = await renderizar('/agendar')
     await escolherAteDados(usuario)
 
     await usuario.clear(screen.getByLabelText('Nome completo'))
@@ -88,7 +88,7 @@ describe('Agendamento', () => {
   })
 
   it('formata o telefone enquanto digita', async () => {
-    const usuario = renderizar('/agendar')
+    const usuario = await renderizar('/agendar')
     await escolherAteDados(usuario)
 
     const telefone = screen.getByLabelText('Telefone / WhatsApp')
@@ -98,7 +98,7 @@ describe('Agendamento', () => {
   })
 
   it('conclui o agendamento e ele aparece em "Meus agendamentos"', async () => {
-    const usuario = renderizar('/agendar')
+    const usuario = await renderizar('/agendar')
     await escolherAteDados(usuario)
 
     await usuario.click(screen.getByRole('button', { name: 'Confirmar agendamento' }))

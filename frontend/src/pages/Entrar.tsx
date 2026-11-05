@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import BotaoGoogle from '../components/BotaoGoogle.tsx'
 import Campo from '../components/Campo.tsx'
+import CarregandoPagina from '../components/CarregandoPagina.tsx'
 import InputSenha from '../components/InputSenha.tsx'
 import { destinoAposEntrar, useAuth } from '../contexts/auth.ts'
 import { donoExemplo } from '../services/dadosExemplo.ts'
@@ -15,7 +16,7 @@ const opcoes: { tipo: TipoLogin; rotulo: string; icone: typeof Mail }[] = [
 ]
 
 export default function Entrar() {
-  const { usuario, entrar, entrarComGoogle } = useAuth()
+  const { usuario, carregando, entrar, entrarComGoogle } = useAuth()
   const [parametros] = useSearchParams()
   const voltar = parametros.get('voltar')
 
@@ -26,6 +27,7 @@ export default function Entrar() {
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState<'senha' | 'google' | null>(null)
 
+  if (carregando) return <CarregandoPagina />
   // Já entrou (ou acabou de entrar): segue para onde precisava ir.
   if (usuario) return <Navigate to={destinoAposEntrar(usuario, voltar)} replace />
 

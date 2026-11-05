@@ -53,8 +53,7 @@ export default function Layout() {
 
   function sairDaConta() {
     fecharMenu()
-    sair()
-    navegar('/')
+    void sair().finally(() => navegar('/'))
   }
 
   useRolagemPorRota()
