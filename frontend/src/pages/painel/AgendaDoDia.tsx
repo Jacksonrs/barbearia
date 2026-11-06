@@ -1,4 +1,5 @@
 import {
+  CalendarCheck,
   CalendarX,
   ChevronLeft,
   ChevronRight,
@@ -85,8 +86,12 @@ export default function AgendaDoDia() {
             <ChevronRight size={20} />
           </button>
           {data !== hoje && (
-            <button type="button" className="botao-texto" onClick={() => setData(hoje)}>
-              Hoje
+            <button
+              type="button"
+              className="botao botao--secundario botao--pequeno"
+              onClick={() => setData(hoje)}
+            >
+              <CalendarCheck size={16} aria-hidden="true" /> Voltar para hoje
             </button>
           )}
         </div>
@@ -118,7 +123,10 @@ export default function AgendaDoDia() {
       </div>
 
       <div className="agenda-resumo">
-        <h2>{formatarDataLonga(data)}</h2>
+        <div className="agenda-dia">
+          {data === hoje && <span className="selo selo--ativo">Hoje</span>}
+          <h2>{formatarDataLonga(data)}</h2>
+        </div>
         {agenda.dados && aberto && (
           <p>
             <strong>{confirmados.length}</strong>{' '}

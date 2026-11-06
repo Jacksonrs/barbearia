@@ -1,7 +1,9 @@
 import { ArrowRight, CalendarCheck, Clock, Scissors, UserRound } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import CarregandoPagina from '../components/CarregandoPagina.tsx'
 import { ErroCarregamento, Esqueleto } from '../components/agendamento/Estados.tsx'
 import { iconeDoServico } from '../components/agendamento/iconesServico.ts'
+import { areaDoUsuario, useAuth } from '../contexts/auth.ts'
 import { useRecurso } from '../hooks/useRecurso.ts'
 import { useTitulo } from '../hooks/useTitulo.ts'
 import { listarServicos } from '../services/agendamentoApi.ts'
@@ -15,8 +17,15 @@ const passos = [
 
 export default function Inicio() {
   useTitulo()
+  const { usuario, carregando } = useAuth()
+  const saindo = (useLocation().state as { saindo?: boolean } | null)?.saindo === true
   // Vem da mesma fonte do agendamento: o que o dono altera no painel aparece aqui.
   const servicos = useRecurso('servicos', listarServicos)
+
+  // A página inicial é a vitrine para visitantes: quem está logado fica na sua área
+  // (cliente nos agendamentos, dono no painel). Ao sair da conta, volta para cá.
+  if (carregando) return <CarregandoPagina />
+  if (usuario && !saindo) return <Navigate to={areaDoUsuario(usuario)} replace />
 
   return (
     <>

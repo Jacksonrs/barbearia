@@ -26,8 +26,13 @@ export function useUsuarioLogado(): Usuario {
   return usuario
 }
 
+/** Tela principal de cada perfil: é o "início" de quem está logado. */
+export function areaDoUsuario(usuario: Usuario): string {
+  return usuario.papel === 'dono' ? '/painel' : '/meus-agendamentos'
+}
+
 /** Para onde ir depois de entrar: a página que pediu o login, ou a área de cada perfil. */
 export function destinoAposEntrar(usuario: Usuario, voltar: string | null): string {
   if (voltar?.startsWith('/') && !voltar.startsWith('//')) return voltar
-  return usuario.papel === 'dono' ? '/painel' : '/meus-agendamentos'
+  return areaDoUsuario(usuario)
 }

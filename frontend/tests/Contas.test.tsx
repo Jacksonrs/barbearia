@@ -63,7 +63,22 @@ describe('Entrar e cadastro', () => {
     await entrarComoCliente()
     const usuario = await renderizar('/meus-agendamentos')
     await usuario.click(screen.getByRole('button', { name: 'Sair' }))
-    expect(screen.getByRole('link', { name: 'Entrar' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Entrar' })).toBeInTheDocument()
+    // Volta para a página inicial pública.
+    expect(screen.getByRole('heading', { level: 1, name: /estilo e precisão/i })).toBeInTheDocument()
+  })
+
+  it('cliente logado que abre o início fica nos seus agendamentos', async () => {
+    await entrarComoCliente()
+    await renderizar('/')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Meus agendamentos' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Início' })).not.toBeInTheDocument()
+  })
+
+  it('dono logado que abre o início fica no painel', async () => {
+    await entrarComoDono()
+    await renderizar('/')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Painel da barbearia' })).toBeInTheDocument()
   })
 })
 
@@ -93,6 +108,20 @@ describe('Meus agendamentos', () => {
 })
 
 describe('Painel do dono', () => {
+  it('mostra a qual dia a agenda se refere e volta para hoje', async () => {
+    await entrarComoDono()
+    const usuario = await renderizar('/painel')
+    expect(screen.getByText('Hoje')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Voltar para hoje' })).not.toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Próximo dia' }))
+    await usuario.click(screen.getByRole('button', { name: 'Próximo dia' }))
+    expect(screen.queryByText('Hoje')).not.toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Voltar para hoje' }))
+    expect(screen.getByText('Hoje')).toBeInTheDocument()
+  })
+
   it('bloqueia o painel para clientes', async () => {
     await entrarComoCliente()
     await renderizar('/painel')

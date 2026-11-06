@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/auth.ts'
+import { areaDoUsuario, useAuth } from '../contexts/auth.ts'
 import { useAvisos } from '../contexts/avisos.ts'
 
 const anoAtual = new Date().getFullYear()
@@ -20,9 +20,9 @@ const links = [
   { para: '/#como-funciona', rotulo: 'Como funciona' },
 ]
 
-function Marca() {
+function Marca({ para }: { para: string }) {
   return (
-    <Link to="/" className="marca" aria-label="Jr Barber — início">
+    <Link to={para} className="marca" aria-label="Jr Barber — início">
       <span className="marca-icone" aria-hidden="true">
         <Scissors size={18} strokeWidth={2.2} />
       </span>
@@ -57,12 +57,19 @@ export default function Layout() {
   const navegar = useNavigate()
   const avisar = useAvisos()
 
-  // Vai para o início antes de sair: se fosse depois, quem estivesse numa tela
-  // protegida seria jogado para /entrar (e essa página ficaria no histórico).
-  function sairDaConta() {
+  // Logado, o "início" é a área da conta; a página inicial pública é só para visitantes.
+  const inicio = usuario ? areaDoUsuario(usuario) : '/'
+
+  // Ao sair, volta para a página inicial pública. Vai para lá ANTES de encerrar a sessão
+  // (se fosse depois, a tela protegida mandaria para /entrar); `saindo` avisa o início
+  // para não devolver o usuário à área da conta nesse meio-tempo. Com `replace`, o botão
+  // "voltar" não reabre a área que exige login.
+  async function sairDaConta() {
     fecharMenu()
-    navegar('/')
-    void sair().then(() => avisar('Você saiu da sua conta.', 'info'))
+    navegar('/', { replace: true, state: { saindo: true } })
+    await sair()
+    navegar('/', { replace: true }) // Limpa a marca `saindo` do histórico.
+    avisar('Você saiu da sua conta.', 'info')
   }
 
   useRolagemPorRota()
@@ -85,20 +92,23 @@ export default function Layout() {
     <div className="layout">
       <header className="cabecalho">
         <div className="container cabecalho-interno">
-          <Marca />
+          <Marca para={inicio} />
 
           <nav
             id="menu-principal"
             className={`menu ${menuAberto ? 'menu--aberto' : ''}`}
             aria-label="Principal"
           >
-            {links.map((link) => (
-              <Link key={link.para} to={link.para} onClick={fecharMenu}>
-                {link.rotulo}
-              </Link>
-            ))}
-
-            <span className="menu-separador" aria-hidden="true" />
+            {!usuario && (
+              <>
+                {links.map((link) => (
+                  <Link key={link.para} to={link.para} onClick={fecharMenu}>
+                    {link.rotulo}
+                  </Link>
+                ))}
+                <span className="menu-separador" aria-hidden="true" />
+              </>
+            )}
 
             {usuario ? (
               <>
@@ -111,7 +121,7 @@ export default function Layout() {
                     <CalendarCheck size={17} aria-hidden="true" /> Meus agendamentos
                   </NavLink>
                 )}
-                <button type="button" className="menu-link-botao" onClick={sairDaConta}>
+                <button type="button" className="menu-link-botao" onClick={() => void sairDaConta()}>
                   <LogOut size={17} aria-hidden="true" /> Sair
                 </button>
               </>
@@ -150,19 +160,26 @@ export default function Layout() {
       <footer className="rodape">
         <div className="container rodape-interno">
           <div>
-            <Marca />
+            <Marca para={inicio} />
             <p className="rodape-texto">Corte, barba e cuidado masculino com hora marcada.</p>
           </div>
           <nav className="rodape-links" aria-label="Rodapé">
-            {links.map((link) => (
-              <Link key={link.para} to={link.para}>
-                {link.rotulo}
-              </Link>
-            ))}
             {usuario?.papel === 'dono' ? (
               <Link to="/painel">Painel</Link>
+            ) : usuario ? (
+              <>
+                <Link to="/meus-agendamentos">Meus agendamentos</Link>
+                <Link to="/agendar">Agendar</Link>
+              </>
             ) : (
-              <Link to="/agendar">Agendar</Link>
+              <>
+                {links.map((link) => (
+                  <Link key={link.para} to={link.para}>
+                    {link.rotulo}
+                  </Link>
+                ))}
+                <Link to="/agendar">Agendar</Link>
+              </>
             )}
           </nav>
         </div>

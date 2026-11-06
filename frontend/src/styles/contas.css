@@ -901,3 +901,24 @@
     width: 100%;
   }
 }
+
+.agenda-dia {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.seletor-data .botao--pequeno {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  /* No celular, "Voltar para hoje" desce para a linha de baixo em vez de espremer a data. */
+  .seletor-data {
+    flex-wrap: wrap;
+  }
+
+  .seletor-data .botao--pequeno {
+    width: 100%;
+  }
+}
