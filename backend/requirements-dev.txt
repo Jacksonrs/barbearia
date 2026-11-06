@@ -1,3 +1,4 @@
 -r requirements.txt
 pytest>=9.2
-httpx>=0.28
+# Cliente HTTP do TestClient (o Starlette marcou o `httpx` antigo como obsoleto).
+httpx2>=2.16

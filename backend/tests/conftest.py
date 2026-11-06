@@ -6,14 +6,21 @@ Rodar (dentro de backend/):  .venv/bin/pytest
 from datetime import date, datetime
 
 import pytest
+from argon2 import PasswordHasher
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlalchemy.orm import sessionmaker
 
-from app import config, limite_login
+from app import config, limite_login, seguranca
 from app.database import Base, criar_engine, obter_db
 from app.dependencias import obter_agora
 from app.main import app
 from app.seed import popular
+
+# O argon2 é lento de propósito (contra força bruta). Nos testes isso só atrasa:
+# usa o custo mínimo. O comportamento (hash, conferência) é o mesmo.
+seguranca._hasher = PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
+seguranca._HASH_FALSO = seguranca._hasher.hash("senha-que-nao-existe")
 
 # Terça-feira (barbearia abre das 09:00 às 19:00).
 TERCA = date(2026, 11, 10)
@@ -43,6 +50,13 @@ def relogio():
 @pytest.fixture
 def fabrica_db(tmp_path):
     engine = criar_engine(f"sqlite:///{tmp_path / 'teste.db'}")
+
+    # Banco descartável: não precisa esperar o disco gravar (deixa os testes bem mais rápidos).
+    @event.listens_for(engine, "connect")
+    def _sem_fsync(conexao, _):
+        conexao.execute("PRAGMA synchronous=OFF")
+        conexao.execute("PRAGMA journal_mode=MEMORY")
+
     Base.metadata.create_all(engine)
     fabrica = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     with fabrica() as db:
