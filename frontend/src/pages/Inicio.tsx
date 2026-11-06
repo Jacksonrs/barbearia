@@ -1,9 +1,12 @@
-import { ArrowRight, CalendarCheck, Clock, Scissors, UserRound } from 'lucide-react'
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { ArrowRight, Clock, Scissors, UserRound } from 'lucide-react'
+import { useEffect } from 'react'
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import CarregandoPagina from '../components/CarregandoPagina.tsx'
+import FormLogin from '../components/FormLogin.tsx'
+import LinkAgendar, { ID_QUADRO_LOGIN } from '../components/LinkAgendar.tsx'
 import { ErroCarregamento, Esqueleto } from '../components/agendamento/Estados.tsx'
 import { iconeDoServico } from '../components/agendamento/iconesServico.ts'
-import { areaDoUsuario, useAuth } from '../contexts/auth.ts'
+import { destinoAposEntrar, useAuth } from '../contexts/auth.ts'
 import { useRecurso } from '../hooks/useRecurso.ts'
 import { useTitulo } from '../hooks/useTitulo.ts'
 import { listarServicos } from '../services/agendamentoApi.ts'
@@ -18,14 +21,30 @@ const passos = [
 export default function Inicio() {
   useTitulo()
   const { usuario, carregando } = useAuth()
-  const saindo = (useLocation().state as { saindo?: boolean } | null)?.saindo === true
+  const { state, hash, key } = useLocation()
+  const saindo = (state as { saindo?: boolean } | null)?.saindo === true
+  // Veio de um "Agendar": depois do login, segue para lá (ex.: /agendar?servico=corte).
+  const [parametros] = useSearchParams()
+  const voltar = parametros.get('voltar')
   // Vem da mesma fonte do agendamento: o que o dono altera no painel aparece aqui.
   const servicos = useRecurso('servicos', listarServicos)
+
+  // Clicou em "Agendar" sem estar logado: o Layout rola até o quadro; aqui o cursor vai
+  // para o primeiro campo e o quadro dá um brilho para chamar a atenção.
+  useEffect(() => {
+    if (hash !== `#${ID_QUADRO_LOGIN}`) return
+    const quadro = document.getElementById(ID_QUADRO_LOGIN)
+    if (!quadro) return
+    document.getElementById('hero-login-identificador')?.focus({ preventScroll: true })
+    quadro.classList.remove('hero-login--destaque')
+    void quadro.offsetWidth // Reinicia a animação a cada clique.
+    quadro.classList.add('hero-login--destaque')
+  }, [hash, key, carregando])
 
   // A página inicial é a vitrine para visitantes: quem está logado fica na sua área
   // (cliente nos agendamentos, dono no painel). Ao sair da conta, volta para cá.
   if (carregando) return <CarregandoPagina />
-  if (usuario && !saindo) return <Navigate to={areaDoUsuario(usuario)} replace />
+  if (usuario && !saindo) return <Navigate to={destinoAposEntrar(usuario, voltar)} replace />
 
   return (
     <>
@@ -40,30 +59,42 @@ export default function Inicio() {
               Marque seu horário em poucos cliques e chegue na hora certa. Sem fila, sem espera.
             </p>
             <div className="hero-acoes">
-              <Link to="/agendar" className="botao">
+              <LinkAgendar className="botao">
                 Agendar horário <ArrowRight size={18} aria-hidden="true" />
-              </Link>
+              </LinkAgendar>
               <Link to="/#servicos" className="botao botao--secundario">
                 Ver serviços
               </Link>
             </div>
           </div>
 
-          <div className="hero-visual" aria-hidden="true">
-            <div className="hero-cartao">
-              <span className="hero-monograma">JR</span>
-              <ul className="hero-lista">
-                <li>
-                  <CalendarCheck size={18} /> Agendamento online
-                </li>
-                <li>
-                  <UserRound size={18} /> Escolha seu barbeiro
-                </li>
-                <li>
-                  <Clock size={18} /> Sem fila de espera
-                </li>
-              </ul>
-            </div>
+          {/* Login direto na vitrine (só visitantes veem esta página). No celular fica
+              escondido para não empurrar o "Agendar horário"; lá o login é pelo menu. */}
+          <div className="hero-visual">
+            <section
+              id={ID_QUADRO_LOGIN}
+              className="hero-cartao hero-login"
+              aria-labelledby="hero-login-titulo"
+            >
+              <header className="hero-login-cabecalho">
+                <span className="hero-monograma" aria-hidden="true">
+                  JR
+                </span>
+                <div>
+                  <h2 id="hero-login-titulo">Acesse sua conta</h2>
+                  <p>Agende e acompanhe seus horários.</p>
+                </div>
+              </header>
+
+              <FormLogin prefixo="hero-login" />
+
+              <p className="cartao-auth-rodape">
+                Não tem conta?{' '}
+                <Link to={voltar ? `/cadastro?voltar=${encodeURIComponent(voltar)}` : '/cadastro'}>
+                  Criar conta
+                </Link>
+              </p>
+            </section>
           </div>
         </div>
       </section>
@@ -93,13 +124,13 @@ export default function Inicio() {
                     <span className="opcao-meta">
                       <Clock size={14} aria-hidden="true" /> {formatarDuracao(duracaoMin)}
                     </span>
-                    <Link
-                      to={`/agendar?servico=${encodeURIComponent(id)}`}
+                    <LinkAgendar
+                      para={`/agendar?servico=${encodeURIComponent(id)}`}
                       className="link-seta"
                       aria-label={`Agendar ${nome}`}
                     >
                       Agendar <ArrowRight size={16} aria-hidden="true" />
-                    </Link>
+                    </LinkAgendar>
                   </li>
                 )
               })}
@@ -135,9 +166,9 @@ export default function Inicio() {
               <h2>Pronto para o próximo corte?</h2>
               <p>Escolha o melhor horário para você e garanta sua vaga.</p>
             </div>
-            <Link to="/agendar" className="botao">
+            <LinkAgendar className="botao">
               Agendar agora <ArrowRight size={18} aria-hidden="true" />
-            </Link>
+            </LinkAgendar>
           </div>
         </div>
       </section>

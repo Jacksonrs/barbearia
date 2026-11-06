@@ -43,9 +43,26 @@ html {
 
 body {
   margin: 0;
-  background: var(--cor-fundo);
+  /* Sem fundo próprio: o fundo escuro vem do :root e o degradê (body::before) fica visível. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/*
+ * Degradê do site: uma camada fixa atrás de todas as páginas. Fica no lugar enquanto
+ * a página rola, então não existe "fim" do brilho nem emenda entre as seções.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 60% at 90% 0%, rgb(201 162 77 / 0.16), transparent 70%),
+    radial-gradient(55% 50% at 0% 100%, rgb(201 162 77 / 0.08), transparent 70%),
+    radial-gradient(40% 35% at 50% 55%, rgb(201 162 77 / 0.03), transparent 70%),
+    linear-gradient(180deg, transparent 0%, rgb(0 0 0 / 0.35) 100%);
 }
 
 body.sem-rolagem {
@@ -302,9 +319,6 @@ a {
   position: relative;
   overflow: hidden;
   padding: 96px 0 112px;
-  background:
-    radial-gradient(60% 60% at 85% 20%, rgb(201 162 77 / 0.14), transparent 70%),
-    radial-gradient(40% 50% at 0% 100%, rgb(201 162 77 / 0.06), transparent 70%);
 }
 
 .hero-interno {
@@ -373,28 +387,44 @@ a {
   color: var(--cor-destaque);
 }
 
-.hero-lista {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 12px;
+/* Quadro de login da página inicial */
+.hero-login {
+  aspect-ratio: auto;
+  max-width: 420px;
+  justify-content: flex-start;
+  gap: 18px;
+  padding: 32px;
 }
 
-.hero-lista li {
+.hero-login-cabecalho {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: var(--raio-pequeno);
-  background: rgb(14 14 14 / 0.7);
-  border: 1px solid var(--cor-borda);
-  font-size: 0.92rem;
+  gap: 16px;
+  margin-bottom: 4px;
 }
 
-.hero-lista svg {
-  color: var(--cor-destaque);
+.hero-login .hero-monograma {
   flex-shrink: 0;
+  font-size: 3.2rem;
+}
+
+.hero-login-cabecalho h2 {
+  font-size: 1.5rem;
+}
+
+.hero-login-cabecalho p {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  color: var(--cor-texto-suave);
+}
+
+/* Campos mais compactos que na tela "Entrar", para caber ao lado do título. */
+.hero-login .form-auth {
+  gap: 14px;
+}
+
+.hero-login .botao-google {
+  min-height: 46px;
 }
 
 /* ===== Seções ===== */
@@ -403,8 +433,14 @@ a {
 }
 
 .secao--alternada {
-  background: var(--cor-fundo-alt);
-  border-block: 1px solid var(--cor-borda);
+  /* Faixa levemente mais clara que some nas bordas (sem linha de corte). */
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgb(255 255 255 / 0.025) 18%,
+    rgb(255 255 255 / 0.025) 82%,
+    transparent
+  );
 }
 
 .secao-cabecalho {
@@ -584,7 +620,7 @@ a {
 /* ===== Rodapé ===== */
 .rodape {
   border-top: 1px solid var(--cor-borda);
-  background: var(--cor-fundo-alt);
+  background: rgb(10 10 10 / 0.55);
 }
 
 .rodape-interno {
@@ -723,7 +759,7 @@ a {
     padding: 48px 0 64px;
   }
 
-  /* O card decorativo repete o "Como funciona"; no celular ele só empurra o conteúdo. */
+  /* No celular o quadro de login empurraria o "Agendar horário"; lá o login é pelo menu. */
   .hero-visual {
     display: none;
   }
@@ -884,5 +920,31 @@ a {
     right: 12px;
     bottom: max(12px, env(safe-area-inset-bottom));
     width: auto;
+  }
+}
+
+/* Na página inicial, o quadro de login substitui o "Entrar" do menu (exceto no celular). */
+@media (min-width: 721px) {
+  .menu a.menu-entrar--inicio {
+    display: none;
+  }
+}
+
+/* Brilho no quadro de login ao chegar nele por um botão "Agendar". */
+.hero-login--destaque {
+  animation: destaque-login 1.4s ease-out;
+}
+
+@keyframes destaque-login {
+  0% {
+    box-shadow:
+      0 0 0 0 rgb(201 162 77 / 0.55),
+      0 40px 80px -30px rgb(0 0 0 / 0.8);
+    border-color: var(--cor-destaque);
+  }
+  100% {
+    box-shadow:
+      0 0 0 18px rgb(201 162 77 / 0),
+      0 40px 80px -30px rgb(0 0 0 / 0.8);
   }
 }

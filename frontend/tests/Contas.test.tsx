@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { criarAgendamento, listarServicos } from '../src/services/agendamentoApi.ts'
 import * as authApi from '../src/services/authApi.ts'
 import { donoExemplo } from './dados/dadosExemplo.ts'
@@ -30,6 +30,48 @@ describe('Entrar e cadastro', () => {
     await usuario.click(screen.getByRole('button', { name: 'Criar conta' }))
     expect(screen.getByText('Informe seu nome.')).toBeInTheDocument()
     expect(screen.getByText(/pelo menos 6 caracteres/)).toBeInTheDocument()
+  })
+
+  it('entra pelo quadro da página inicial e vai para a área da conta', async () => {
+    await entrarComoCliente()
+    await authApi.sair()
+
+    const usuario = await renderizar('/')
+    const quadro = screen.getByRole('region', { name: 'Acesse sua conta' })
+    await usuario.type(within(quadro).getByLabelText('E-mail', { selector: 'input[type=email]' }), CLIENTE.email)
+    await usuario.type(within(quadro).getByLabelText('Senha'), CLIENTE.senha)
+    await usuario.click(within(quadro).getByRole('button', { name: 'Entrar' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Meus agendamentos' })).toBeInTheDocument()
+  })
+
+  it('"Agendar" na página inicial desce até o quadro e, após o login, abre o agendamento', async () => {
+    await entrarComoCliente()
+    await authApi.sair()
+    // O jsdom não calcula layout: simula o quadro visível (computador).
+    vi.spyOn(HTMLElement.prototype, 'getClientRects').mockReturnValue([{}] as unknown as DOMRectList)
+
+    const usuario = await renderizar('/')
+    await usuario.click(await screen.findByRole('link', { name: 'Agendar Barba' }))
+
+    // Continua na página inicial, com o cursor no e-mail do quadro.
+    const quadro = screen.getByRole('region', { name: 'Acesse sua conta' })
+    const email = within(quadro).getByLabelText('E-mail', { selector: 'input[type=email]' })
+    expect(email).toHaveFocus()
+
+    await usuario.type(email, CLIENTE.email)
+    await usuario.type(within(quadro).getByLabelText('Senha'), CLIENTE.senha)
+    await usuario.click(within(quadro).getByRole('button', { name: 'Entrar' }))
+
+    // Vai direto para o agendamento, com o serviço escolhido.
+    expect(await screen.findByRole('heading', { level: 2, name: 'Escolha o barbeiro' })).toBeInTheDocument()
+    vi.restoreAllMocks()
+  })
+
+  it('"Agendar" no celular (quadro escondido) leva para a tela Entrar', async () => {
+    const usuario = await renderizar('/')
+    await usuario.click(screen.getByRole('link', { name: /agendar horário/i }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Entrar' })).toBeInTheDocument()
   })
 
   it('entra com telefone e senha', async () => {

@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { areaDoUsuario, useAuth } from '../contexts/auth.ts'
 import { useAvisos } from '../contexts/avisos.ts'
+import LinkAgendar from './LinkAgendar.tsx'
 
 const anoAtual = new Date().getFullYear()
 
@@ -55,6 +56,7 @@ export default function Layout() {
   const fecharMenu = () => setMenuAberto(false)
   const { usuario, sair } = useAuth()
   const navegar = useNavigate()
+  const { pathname } = useLocation()
   const avisar = useAvisos()
 
   // Logado, o "início" é a área da conta; a página inicial pública é só para visitantes.
@@ -126,15 +128,21 @@ export default function Layout() {
                 </button>
               </>
             ) : (
-              <NavLink to="/entrar" onClick={fecharMenu}>
+              // Na página inicial o quadro de login já está na tela (computador/tablet);
+              // o link só aparece no celular, onde o quadro fica escondido.
+              <NavLink
+                to="/entrar"
+                onClick={fecharMenu}
+                className={pathname === '/' ? 'menu-entrar--inicio' : undefined}
+              >
                 <LogIn size={17} aria-hidden="true" /> Entrar
               </NavLink>
             )}
 
             {usuario?.papel !== 'dono' && (
-              <Link to="/agendar" className="botao botao--pequeno" onClick={fecharMenu}>
+              <LinkAgendar className="botao botao--pequeno" onClick={fecharMenu}>
                 Agendar
-              </Link>
+              </LinkAgendar>
             )}
           </nav>
 
@@ -161,7 +169,7 @@ export default function Layout() {
         <div className="container rodape-interno">
           <div>
             <Marca para={inicio} />
-            <p className="rodape-texto">Corte, barba e cuidado masculino com hora marcada.</p>
+            <p className="rodape-texto">Corte, barba e cuidado masculino.</p>
           </div>
           <nav className="rodape-links" aria-label="Rodapé">
             {usuario?.papel === 'dono' ? (
@@ -178,7 +186,7 @@ export default function Layout() {
                     {link.rotulo}
                   </Link>
                 ))}
-                <Link to="/agendar">Agendar</Link>
+                <LinkAgendar>Agendar</LinkAgendar>
               </>
             )}
           </nav>
