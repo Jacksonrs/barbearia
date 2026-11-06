@@ -1,8 +1,18 @@
-import { CalendarX, ChevronLeft, ChevronRight, MessageCircle, Phone, StoreIcon } from 'lucide-react'
-import { useState } from 'react'
+import {
+  CalendarX,
+  ChevronLeft,
+  ChevronRight,
+  MessageCircle,
+  Phone,
+  RefreshCw,
+  StoreIcon,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
 import CancelarAgendamento from '../../components/CancelarAgendamento.tsx'
 import { ErroCarregamento, Esqueleto } from '../../components/agendamento/Estados.tsx'
+import { useAvisos } from '../../contexts/avisos.ts'
 import { useRecurso } from '../../hooks/useRecurso.ts'
+import { useTitulo } from '../../hooks/useTitulo.ts'
 import {
   cancelarAgendamento,
   diaAberto,
@@ -24,8 +34,14 @@ function somarDias(iso: string, dias: number): string {
 const apenasDigitos = (telefone: string) => telefone.replace(/\D/g, '')
 
 export default function AgendaDoDia() {
-  // Capturados uma vez ao abrir a tela (não a cada renderização).
-  const [agora] = useState(() => Date.now())
+  useTitulo('Agenda do dia')
+  const avisar = useAvisos()
+  // Atualizado a cada minuto: o "próximo cliente" e o botão de cancelar acompanham o relógio.
+  const [agora, setAgora] = useState(() => Date.now())
+  useEffect(() => {
+    const relogio = setInterval(() => setAgora(Date.now()), 60_000)
+    return () => clearInterval(relogio)
+  }, [])
   const hoje = paraIso(new Date(agora))
   const [data, setData] = useState(hoje)
   const [barbeiro, setBarbeiro] = useState(TODOS)
@@ -40,6 +56,9 @@ export default function AgendaDoDia() {
   const cancelados = doBarbeiro.length - confirmados.length
   // Enquanto o horário de funcionamento não chega, trata o dia como aberto.
   const aberto = funcionamento.dados ? diaAberto(deIso(data), funcionamento.dados) : true
+  // Hoje: destaca o próximo cliente a ser atendido.
+  const proximoId =
+    data === hoje ? confirmados.find((a) => inicioAgendamento(a).getTime() > agora)?.id : undefined
 
   return (
     <div className="agenda">
@@ -72,17 +91,30 @@ export default function AgendaDoDia() {
           )}
         </div>
 
-        <label className="filtro">
-          <span>Barbeiro</span>
-          <select value={barbeiro} onChange={(e) => setBarbeiro(e.target.value)}>
-            <option value={TODOS}>Todos</option>
-            {barbeiros.dados?.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.nome}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="agenda-barra-acoes">
+          <button
+            type="button"
+            className="botao-icone"
+            onClick={agenda.recarregar}
+            disabled={agenda.carregando || agenda.atualizando}
+            aria-label="Atualizar agenda"
+            title="Atualizar agenda"
+          >
+            <RefreshCw size={18} className={agenda.atualizando ? 'girando' : undefined} aria-hidden="true" />
+          </button>
+
+          <label className="filtro">
+            <span>Barbeiro</span>
+            <select value={barbeiro} onChange={(e) => setBarbeiro(e.target.value)}>
+              <option value={TODOS}>Todos</option>
+              {barbeiros.dados?.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="agenda-resumo">
@@ -120,7 +152,10 @@ export default function AgendaDoDia() {
             const futuro = inicioAgendamento(a).getTime() > agora
             const telefone = apenasDigitos(a.cliente.telefone)
             return (
-              <li key={a.id} className={`item-agenda${cancelado ? ' item-agenda--cancelado' : ''}`}>
+              <li
+                key={a.id}
+                className={`item-agenda${cancelado ? ' item-agenda--cancelado' : ''}${a.id === proximoId ? ' item-agenda--proximo' : ''}`}
+              >
                 <div className="item-agenda-hora">
                   <strong>{a.hora}</strong>
                   <span>{minutosParaHora(horaParaMinutos(a.hora) + a.duracaoMin)}</span>
@@ -128,6 +163,7 @@ export default function AgendaDoDia() {
                 <div className="item-agenda-corpo">
                   <div className="agendamento-topo">
                     <h3>{a.cliente.nome}</h3>
+                    {a.id === proximoId && <span className="selo selo--ativo">Próximo</span>}
                     {cancelado && (
                       <span className="selo selo--cancelado">
                         Cancelado{a.canceladoPor === 'cliente' ? ' pelo cliente' : ''}
@@ -156,6 +192,7 @@ export default function AgendaDoDia() {
                     <CancelarAgendamento
                       onConfirmar={async () => {
                         await cancelarAgendamento(a.id)
+                        avisar(`Horário das ${a.hora} de ${a.cliente.nome.split(' ')[0]} cancelado.`)
                         agenda.recarregar()
                       }}
                     />

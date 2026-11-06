@@ -1,24 +1,44 @@
-import { CircleCheck } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { CalendarPlus, Check, CircleCheck, Copy } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAvisos } from '../../contexts/avisos.ts'
 import { ANTECEDENCIA_CANCELAMENTO_MIN } from '../../services/agendamentoApi.ts'
+import type { Agendamento } from '../../types/agendamento.ts'
+import { baixarCalendario } from '../../utils/calendario.ts'
 import type { ItemResumo } from './itensResumo.ts'
 import { ListaResumo } from './Resumo.tsx'
 
 type Props = {
-  codigo: string
-  nomeCliente: string
+  agendamento: Agendamento
   itens: ItemResumo[]
   onNovo: () => void
 }
 
-export default function Confirmado({ codigo, nomeCliente, itens, onNovo }: Props) {
+export default function Confirmado({ agendamento, itens, onNovo }: Props) {
   const tituloRef = useRef<HTMLHeadingElement>(null)
-  const primeiroNome = nomeCliente.trim().split(' ')[0]
+  const primeiroNome = agendamento.cliente.nome.trim().split(' ')[0]
+  const avisar = useAvisos()
+  const [copiado, setCopiado] = useState(false)
+  const nomeBarbeiro = itens.find((i) => i.rotulo === 'Barbeiro')?.valor ?? null
 
   useEffect(() => {
     tituloRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    if (!copiado) return
+    const t = setTimeout(() => setCopiado(false), 2000)
+    return () => clearTimeout(t)
+  }, [copiado])
+
+  async function copiarCodigo() {
+    try {
+      await navigator.clipboard.writeText(agendamento.id)
+      setCopiado(true)
+    } catch {
+      avisar('Não foi possível copiar. Anote o código: ' + agendamento.id, 'erro')
+    }
+  }
 
   return (
     <div className="painel confirmado">
@@ -35,10 +55,27 @@ export default function Confirmado({ codigo, nomeCliente, itens, onNovo }: Props
       <div className="confirmado-cartao">
         <div className="confirmado-codigo">
           <span>Código</span>
-          <strong>{codigo}</strong>
+          <strong>{agendamento.id}</strong>
+          <button
+            type="button"
+            className="botao-icone botao-icone--pequeno"
+            onClick={() => void copiarCodigo()}
+            aria-label={copiado ? 'Código copiado' : 'Copiar código'}
+            title={copiado ? 'Copiado!' : 'Copiar código'}
+          >
+            {copiado ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+          </button>
         </div>
         <ListaResumo itens={itens} />
       </div>
+
+      <button
+        type="button"
+        className="botao-texto confirmado-agenda"
+        onClick={() => baixarCalendario(agendamento, nomeBarbeiro)}
+      >
+        <CalendarPlus size={16} aria-hidden="true" /> Adicionar à minha agenda
+      </button>
 
       <p className="confirmado-nota">
         Você pode ver ou cancelar este horário em “Meus agendamentos” (até{' '}

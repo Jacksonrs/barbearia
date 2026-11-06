@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom'
 import CancelarAgendamento from '../components/CancelarAgendamento.tsx'
 import { ErroCarregamento, Esqueleto } from '../components/agendamento/Estados.tsx'
 import { useUsuarioLogado } from '../contexts/auth.ts'
+import { useAvisos } from '../contexts/avisos.ts'
 import { useRecurso } from '../hooks/useRecurso.ts'
+import { useTitulo } from '../hooks/useTitulo.ts'
 import {
   ANTECEDENCIA_CANCELAMENTO_MIN,
   cancelarAgendamento,
@@ -26,7 +28,9 @@ import {
 const fim = (a: Agendamento) => minutosParaHora(horaParaMinutos(a.hora) + a.duracaoMin)
 
 export default function MeusAgendamentos() {
+  useTitulo('Meus agendamentos')
   const usuario = useUsuarioLogado()
+  const avisar = useAvisos()
   // Capturado uma vez ao abrir a tela (não a cada renderização).
   const [agora] = useState(() => Date.now())
   const lista = useRecurso(`meus|${usuario.id}`, listarMeusAgendamentos)
@@ -73,6 +77,7 @@ export default function MeusAgendamentos() {
               <CancelarAgendamento
                 onConfirmar={async () => {
                   await cancelarAgendamento(a.id)
+                  avisar('Agendamento cancelado. O horário foi liberado.')
                   lista.recarregar()
                 }}
               />

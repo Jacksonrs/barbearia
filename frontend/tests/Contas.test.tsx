@@ -88,6 +88,7 @@ describe('Meus agendamentos', () => {
 
     await waitFor(() => expect(screen.getByText('Cancelado')).toBeInTheDocument())
     expect(screen.getByText('Você não tem horários marcados.')).toBeInTheDocument()
+    expect(screen.getByText('Agendamento cancelado. O horário foi liberado.')).toBeInTheDocument()
   })
 })
 

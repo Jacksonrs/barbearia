@@ -840,3 +840,64 @@
     flex: 1;
   }
 }
+
+/* ----- Ajustes de interação ----- */
+.botao-texto:disabled,
+.botao-icone:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.agenda-barra-acoes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Próximo cliente do dia: borda e fundo em destaque. */
+.item-agenda--proximo {
+  border-color: rgb(201 162 77 / 0.45);
+  border-left-color: var(--cor-destaque);
+  background: linear-gradient(90deg, var(--cor-destaque-suave), var(--cor-superficie) 60%);
+}
+
+/* Itens de lista e cartões: leve resposta ao passar o mouse. */
+@media (hover: hover) {
+  .item-servico,
+  .agendamento {
+    transition:
+      border-color var(--transicao),
+      transform var(--transicao);
+  }
+
+  .item-servico:hover,
+  .agendamento:not(.agendamento--cancelado):hover {
+    border-color: var(--cor-borda-forte);
+    transform: translateY(-1px);
+  }
+}
+
+.confirmado-codigo strong {
+  margin-left: auto;
+}
+
+.confirmado-codigo {
+  gap: 10px;
+}
+
+.botao-icone--pequeno {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.confirmado-agenda {
+  margin: -8px auto 20px;
+}
+
+@media (max-width: 640px) {
+  .agenda-barra-acoes {
+    justify-content: space-between;
+    width: 100%;
+  }
+}

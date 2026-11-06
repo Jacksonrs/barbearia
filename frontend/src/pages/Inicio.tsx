@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ErroCarregamento, Esqueleto } from '../components/agendamento/Estados.tsx'
 import { iconeDoServico } from '../components/agendamento/iconesServico.ts'
 import { useRecurso } from '../hooks/useRecurso.ts'
+import { useTitulo } from '../hooks/useTitulo.ts'
 import { listarServicos } from '../services/agendamentoApi.ts'
 import { formatarDuracao } from '../utils/datas.ts'
 
@@ -13,6 +14,7 @@ const passos = [
 ]
 
 export default function Inicio() {
+  useTitulo()
   // Vem da mesma fonte do agendamento: o que o dono altera no painel aparece aqui.
   const servicos = useRecurso('servicos', listarServicos)
 
@@ -82,7 +84,11 @@ export default function Inicio() {
                     <span className="opcao-meta">
                       <Clock size={14} aria-hidden="true" /> {formatarDuracao(duracaoMin)}
                     </span>
-                    <Link to="/agendar" className="link-seta" aria-label={`Agendar ${nome}`}>
+                    <Link
+                      to={`/agendar?servico=${encodeURIComponent(id)}`}
+                      className="link-seta"
+                      aria-label={`Agendar ${nome}`}
+                    >
                       Agendar <ArrowRight size={16} aria-hidden="true" />
                     </Link>
                   </li>

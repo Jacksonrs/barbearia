@@ -1,5 +1,5 @@
 import { CalendarDays, CalendarX } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRecurso } from '../../hooks/useRecurso.ts'
 import { diaAberto, listarHorarios, obterFuncionamento } from '../../services/agendamentoApi.ts'
 import type { Horario } from '../../types/agendamento.ts'
@@ -45,6 +45,16 @@ export default function EtapaHorario({ servicoId, barbeiroId, data, hora, onData
 
   const livres = horarios.dados?.filter((h) => h.disponivel).length ?? 0
 
+  // No celular os horários ficam abaixo da faixa de dias: ao escolher o dia, rola até eles.
+  const horariosRef = useRef<HTMLFieldSetElement>(null)
+  function escolherDia(iso: string) {
+    onData(iso)
+    const alvo = horariosRef.current
+    if (alvo && alvo.getBoundingClientRect().top > window.innerHeight * 0.6) {
+      alvo.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   return (
     <div className="horario">
       <fieldset className="grupo">
@@ -65,7 +75,7 @@ export default function EtapaHorario({ servicoId, barbeiroId, data, hora, onData
                   className="visualmente-oculto"
                   checked={data === iso}
                   disabled={!aberto}
-                  onChange={() => onData(iso)}
+                  onChange={() => escolherDia(iso)}
                   aria-label={`${formatarDataLonga(iso)}${aberto ? '' : ' (fechado)'}`}
                 />
                 <span className="dia-semana">{iso === hoje ? 'Hoje' : formatarDiaSemanaCurto(dia)}</span>
@@ -77,7 +87,7 @@ export default function EtapaHorario({ servicoId, barbeiroId, data, hora, onData
         </div>
       </fieldset>
 
-      <fieldset className="grupo">
+      <fieldset className="grupo" ref={horariosRef}>
         <legend className="grupo-titulo">
           Horário
           {horarios.dados && livres > 0 && (

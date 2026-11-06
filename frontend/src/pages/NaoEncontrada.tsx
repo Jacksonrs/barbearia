@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useTitulo } from '../hooks/useTitulo.ts'
 
 export default function NaoEncontrada() {
+  useTitulo('Página não encontrada')
   return (
     <section className="secao">
       <div className="container pagina-estreita nao-encontrada">

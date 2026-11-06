@@ -790,3 +790,99 @@ a {
     scroll-behavior: auto !important;
   }
 }
+
+/* ===== Avisos (mensagens rápidas no canto da tela) ===== */
+.avisos {
+  position: fixed;
+  z-index: 100;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  display: grid;
+  gap: 10px;
+  width: min(380px, calc(100vw - 40px));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 14px 14px 16px;
+  border-radius: var(--raio-pequeno);
+  border: 1px solid var(--cor-borda-forte);
+  border-left: 3px solid var(--cor-destaque);
+  background: var(--cor-superficie-2);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+  font-size: 0.92rem;
+  pointer-events: auto;
+  animation: aviso-entrar 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.aviso p {
+  flex: 1;
+  padding-top: 1px;
+}
+
+.aviso-icone {
+  flex-shrink: 0;
+  color: var(--cor-destaque);
+}
+
+.aviso--erro {
+  border-left-color: #ef6262;
+}
+
+.aviso--erro .aviso-icone {
+  color: #f08a8a;
+}
+
+.aviso--info {
+  border-left-color: var(--cor-texto-suave);
+}
+
+.aviso--info .aviso-icone {
+  color: var(--cor-texto-suave);
+}
+
+.aviso-fechar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin: -4px -4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  transition:
+    background var(--transicao),
+    color var(--transicao);
+}
+
+.aviso-fechar:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: var(--cor-texto);
+}
+
+@keyframes aviso-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+}
+
+@media (max-width: 480px) {
+  /* No celular, os avisos ocupam a largura toda, embaixo. */
+  .avisos {
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: auto;
+  }
+}

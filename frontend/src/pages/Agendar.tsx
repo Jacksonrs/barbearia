@@ -1,5 +1,6 @@
 import { AlertCircle, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
 import { useEffect, useReducer, useRef, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Confirmado from '../components/agendamento/Confirmado.tsx'
 import EtapaBarbeiro from '../components/agendamento/EtapaBarbeiro.tsx'
 import EtapaDados from '../components/agendamento/EtapaDados.tsx'
@@ -12,7 +13,9 @@ import Resumo from '../components/agendamento/Resumo.tsx'
 import { itensResumo } from '../components/agendamento/itensResumo.ts'
 import { useUsuarioLogado } from '../contexts/auth.ts'
 import { useRecurso } from '../hooks/useRecurso.ts'
+import { useTitulo } from '../hooks/useTitulo.ts'
 import { criarAgendamento, listarBarbeiros, listarServicos } from '../services/agendamentoApi.ts'
+import { ErroApi } from '../services/api.ts'
 import { SEM_PREFERENCIA, type Agendamento, type DadosCliente } from '../types/agendamento.ts'
 import type { Usuario } from '../types/usuario.ts'
 import { validarCliente } from '../utils/cliente.ts'
@@ -30,7 +33,7 @@ type Estado = {
 }
 
 type Acao =
-  | { tipo: 'servico'; id: string }
+  | { tipo: 'servico'; id: string | null }
   | { tipo: 'barbeiro'; id: string }
   | { tipo: 'data'; data: string }
   | { tipo: 'hora'; hora: string }
@@ -39,11 +42,15 @@ type Acao =
   | { tipo: 'trocarHorario' }
   | { tipo: 'reiniciar'; estado: Estado }
 
-/** Começa com os dados de contato da conta já preenchidos. */
-function criarEstadoInicial(usuario: Usuario): Estado {
+/**
+ * Começa com os dados de contato da conta já preenchidos.
+ * Vindo do botão "Agendar" de um serviço (/agendar?servico=corte), ele já vem escolhido
+ * e o cliente começa direto na escolha do barbeiro.
+ */
+function criarEstadoInicial({ usuario, servicoId }: { usuario: Usuario; servicoId: string | null }): Estado {
   return {
-    etapa: 0,
-    servicoId: null,
+    etapa: servicoId ? 1 : 0,
+    servicoId,
     barbeiroId: null,
     data: null,
     hora: null,
@@ -60,7 +67,7 @@ function reducer(estado: Estado, acao: Acao): Estado {
   switch (acao.tipo) {
     // Trocar serviço, barbeiro ou dia muda a disponibilidade: o horário precisa ser escolhido de novo.
     case 'servico':
-      return { ...estado, servicoId: acao.id, hora: null }
+      return { ...estado, servicoId: acao.id, hora: null, etapa: acao.id ? estado.etapa : 0 }
     case 'barbeiro':
       return { ...estado, barbeiroId: acao.id, hora: null }
     case 'data':
@@ -100,12 +107,19 @@ const AVISO_ETAPA = [
 type Envio =
   | { status: 'parado' }
   | { status: 'enviando' }
-  | { status: 'erro'; mensagem: string }
+  /** `horarioOcupado`: alguém reservou o mesmo horário antes (409). */
+  | { status: 'erro'; mensagem: string; horarioOcupado: boolean }
   | { status: 'confirmado'; agendamento: Agendamento }
 
 export default function Agendar() {
+  useTitulo('Agendar horário')
   const usuario = useUsuarioLogado()
-  const [estado, despachar] = useReducer(reducer, usuario, criarEstadoInicial)
+  const [parametros] = useSearchParams()
+  const [estado, despachar] = useReducer(
+    reducer,
+    { usuario, servicoId: parametros.get('servico') },
+    criarEstadoInicial,
+  )
   const [envio, setEnvio] = useState<Envio>({ status: 'parado' })
   const [mostrarErros, setMostrarErros] = useState(false)
 
@@ -130,6 +144,12 @@ export default function Agendar() {
   }, [estado.etapa])
 
   const servico = servicos.dados?.find((s) => s.id === estado.servicoId)
+
+  // Serviço vindo do endereço que não existe (ou foi desativado): volta para a escolha.
+  const servicoInvalido = Boolean(servicos.dados && estado.servicoId && !servico)
+  useEffect(() => {
+    if (servicoInvalido) despachar({ tipo: 'servico', id: null })
+  }, [servicoInvalido])
   const nomeBarbeiro = (id: string | null) =>
     id === SEM_PREFERENCIA
       ? 'Sem preferência'
@@ -172,6 +192,7 @@ export default function Agendar() {
       setEnvio({
         status: 'erro',
         mensagem: erro instanceof Error ? erro.message : 'Não foi possível agendar. Tente novamente.',
+        horarioOcupado: erro instanceof ErroApi && erro.status === 409,
       })
     }
   }
@@ -197,7 +218,7 @@ export default function Agendar() {
   function reiniciar() {
     setEnvio({ status: 'parado' })
     setMostrarErros(false)
-    despachar({ tipo: 'reiniciar', estado: criarEstadoInicial(usuario) })
+    despachar({ tipo: 'reiniciar', estado: criarEstadoInicial({ usuario, servicoId: null }) })
   }
 
   function conteudoEtapa() {
@@ -259,8 +280,7 @@ export default function Agendar() {
 
         {envio.status === 'confirmado' ? (
           <Confirmado
-            codigo={envio.agendamento.id}
-            nomeCliente={envio.agendamento.cliente.nome}
+            agendamento={envio.agendamento}
             itens={itens(envio.agendamento.barbeiroId)}
             onNovo={reiniciar}
           />
@@ -288,16 +308,18 @@ export default function Agendar() {
                   <div className="alerta alerta--erro" role="alert">
                     <AlertCircle size={20} aria-hidden="true" />
                     <p>{envio.mensagem}</p>
-                    <button
-                      type="button"
-                      className="botao-texto"
-                      onClick={() => {
-                        setEnvio({ status: 'parado' })
-                        despachar({ tipo: 'trocarHorario' })
-                      }}
-                    >
-                      Escolher outro horário
-                    </button>
+                    {envio.horarioOcupado && (
+                      <button
+                        type="button"
+                        className="botao-texto"
+                        onClick={() => {
+                          setEnvio({ status: 'parado' })
+                          despachar({ tipo: 'trocarHorario' })
+                        }}
+                      >
+                        Escolher outro horário
+                      </button>
+                    )}
                   </div>
                 )}
 

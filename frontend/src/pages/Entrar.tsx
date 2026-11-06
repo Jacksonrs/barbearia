@@ -6,7 +6,9 @@ import Campo from '../components/Campo.tsx'
 import CarregandoPagina from '../components/CarregandoPagina.tsx'
 import InputSenha from '../components/InputSenha.tsx'
 import { destinoAposEntrar, useAuth } from '../contexts/auth.ts'
-import type { TipoLogin } from '../types/usuario.ts'
+import { useAvisos } from '../contexts/avisos.ts'
+import { useTitulo } from '../hooks/useTitulo.ts'
+import type { TipoLogin, Usuario } from '../types/usuario.ts'
 import { formatarTelefone } from '../utils/cliente.ts'
 
 /** Conta do dono criada pelo seed do backend (só aparece em desenvolvimento). */
@@ -19,6 +21,8 @@ const opcoes: { tipo: TipoLogin; rotulo: string; icone: typeof Mail }[] = [
 
 export default function Entrar() {
   const { usuario, carregando, entrar, entrarComGoogle } = useAuth()
+  useTitulo('Entrar')
+  const avisar = useAvisos()
   const [parametros] = useSearchParams()
   const voltar = parametros.get('voltar')
 
@@ -40,11 +44,12 @@ export default function Entrar() {
     setErro(null)
   }
 
-  async function executar(tipoEnvio: 'senha' | 'google', acao: () => Promise<unknown>) {
+  async function executar(tipoEnvio: 'senha' | 'google', acao: () => Promise<Usuario>) {
     setErro(null)
     setEnviando(tipoEnvio)
     try {
-      await acao()
+      const u = await acao()
+      avisar(`Olá, ${u.nome.split(' ')[0]}! Que bom te ver de novo.`)
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível entrar. Tente novamente.')
       setEnviando(null)

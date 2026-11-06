@@ -6,11 +6,15 @@ import Campo from '../components/Campo.tsx'
 import CarregandoPagina from '../components/CarregandoPagina.tsx'
 import InputSenha from '../components/InputSenha.tsx'
 import { destinoAposEntrar, useAuth } from '../contexts/auth.ts'
-import type { DadosCadastro } from '../types/usuario.ts'
+import { useAvisos } from '../contexts/avisos.ts'
+import { useTitulo } from '../hooks/useTitulo.ts'
+import type { DadosCadastro, Usuario } from '../types/usuario.ts'
 import { formatarTelefone, SENHA_MINIMA, validarCadastro } from '../utils/cliente.ts'
 
 export default function Cadastro() {
   const { usuario, carregando, cadastrar, entrarComGoogle } = useAuth()
+  useTitulo('Criar conta')
+  const avisar = useAvisos()
   const [parametros] = useSearchParams()
   const voltar = parametros.get('voltar')
 
@@ -26,11 +30,12 @@ export default function Cadastro() {
   const erroVisivel = (campo: keyof DadosCadastro) => (mostrarErros ? erros[campo] : undefined)
   const alterar = (campo: keyof DadosCadastro, valor: string) => setDados((d) => ({ ...d, [campo]: valor }))
 
-  async function executar(tipo: 'senha' | 'google', acao: () => Promise<unknown>) {
+  async function executar(tipo: 'senha' | 'google', acao: () => Promise<Usuario>) {
     setErro(null)
     setEnviando(tipo)
     try {
-      await acao()
+      const u = await acao()
+      avisar(`Conta criada! Bem-vindo, ${u.nome.split(' ')[0]}.`)
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível criar a conta. Tente novamente.')
       setEnviando(null)

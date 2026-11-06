@@ -2,7 +2,9 @@ import { AlertCircle, Clock, Loader2, Pencil, Plus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import Campo from '../../components/Campo.tsx'
 import { ErroCarregamento, Esqueleto } from '../../components/agendamento/Estados.tsx'
+import { useAvisos } from '../../contexts/avisos.ts'
 import { useRecurso } from '../../hooks/useRecurso.ts'
+import { useTitulo } from '../../hooks/useTitulo.ts'
 import { listarTodosServicos, salvarServico, type DadosServico } from '../../services/painelApi.ts'
 import type { Servico } from '../../types/agendamento.ts'
 import { formatarDuracao } from '../../utils/datas.ts'
@@ -129,19 +131,36 @@ function FormularioServico({ inicial, titulo, onSalvar, onCancelar }: PropsFormu
 }
 
 export default function Servicos() {
+  useTitulo('Serviços')
+  const avisar = useAvisos()
   const servicos = useRecurso('painel-servicos', listarTodosServicos)
   const [editando, setEditando] = useState<string | null>(null)
+  // Serviço sendo ativado/desativado agora (evita clique duplo e mostra o carregamento).
+  const [alternando, setAlternando] = useState<string | null>(null)
 
   async function salvar(dados: DadosServico, id?: string) {
     await salvarServico(dados, id)
     setEditando(null)
+    avisar(id ? `“${dados.nome.trim()}” atualizado.` : `“${dados.nome.trim()}” criado.`)
     servicos.recarregar()
   }
 
   async function alternarAtivo(servico: Servico) {
     const { id, ...dados } = servico
-    await salvarServico({ ...dados, ativo: !servico.ativo }, id)
-    servicos.recarregar()
+    setAlternando(id)
+    try {
+      await salvarServico({ ...dados, ativo: !servico.ativo }, id)
+      avisar(
+        servico.ativo
+          ? `“${servico.nome}” não aparece mais para os clientes.`
+          : `“${servico.nome}” voltou a aparecer para os clientes.`,
+      )
+      servicos.recarregar()
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : 'Não foi possível alterar o serviço.', 'erro')
+    } finally {
+      setAlternando(null)
+    }
   }
 
   return (
@@ -211,7 +230,12 @@ export default function Servicos() {
                     type="button"
                     className="botao-texto"
                     onClick={() => void alternarAtivo(servico)}
+                    disabled={alternando !== null}
+                    aria-busy={alternando === servico.id}
                   >
+                    {alternando === servico.id && (
+                      <Loader2 size={15} className="girando" aria-hidden="true" />
+                    )}
                     {servico.ativo ? 'Desativar' : 'Ativar'}
                   </button>
                 </div>

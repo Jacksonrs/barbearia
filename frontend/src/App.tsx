@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout.tsx'
 import RotaProtegida from './components/RotaProtegida.tsx'
 import AuthProvider from './contexts/AuthProvider.tsx'
+import AvisosProvider from './contexts/AvisosProvider.tsx'
 import Agendar from './pages/Agendar.tsx'
 import Cadastro from './pages/Cadastro.tsx'
 import Entrar from './pages/Entrar.tsx'
@@ -14,42 +15,44 @@ import Servicos from './pages/painel/Servicos.tsx'
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<Inicio />} />
-          <Route path="entrar" element={<Entrar />} />
-          <Route path="cadastro" element={<Cadastro />} />
-          <Route
-            path="agendar"
-            element={
-              <RotaProtegida>
-                <Agendar />
-              </RotaProtegida>
-            }
-          />
-          <Route
-            path="meus-agendamentos"
-            element={
-              <RotaProtegida>
-                <MeusAgendamentos />
-              </RotaProtegida>
-            }
-          />
-          <Route
-            path="painel"
-            element={
-              <RotaProtegida papel="dono">
-                <Painel />
-              </RotaProtegida>
-            }
-          >
-            <Route index element={<AgendaDoDia />} />
-            <Route path="servicos" element={<Servicos />} />
+    <AvisosProvider>
+      <AuthProvider>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<Inicio />} />
+            <Route path="entrar" element={<Entrar />} />
+            <Route path="cadastro" element={<Cadastro />} />
+            <Route
+              path="agendar"
+              element={
+                <RotaProtegida>
+                  <Agendar />
+                </RotaProtegida>
+              }
+            />
+            <Route
+              path="meus-agendamentos"
+              element={
+                <RotaProtegida>
+                  <MeusAgendamentos />
+                </RotaProtegida>
+              }
+            />
+            <Route
+              path="painel"
+              element={
+                <RotaProtegida papel="dono">
+                  <Painel />
+                </RotaProtegida>
+              }
+            >
+              <Route index element={<AgendaDoDia />} />
+              <Route path="servicos" element={<Servicos />} />
+            </Route>
+            <Route path="*" element={<NaoEncontrada />} />
           </Route>
-          <Route path="*" element={<NaoEncontrada />} />
-        </Route>
-      </Routes>
-    </AuthProvider>
+        </Routes>
+      </AuthProvider>
+    </AvisosProvider>
   )
 }

@@ -40,6 +40,19 @@ describe('Agendamento', () => {
     await entrarComoCliente()
   })
 
+  it('começa no barbeiro quando o serviço vem da página inicial', async () => {
+    await renderizar('/agendar?servico=barba')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Escolha o barbeiro' })).toBeInTheDocument()
+    const resumo = screen.getByRole('complementary', { name: 'Resumo do agendamento' })
+    expect(await within(resumo).findByText('Barba · 30 min')).toBeInTheDocument()
+  })
+
+  it('volta para a escolha do serviço se o do endereço não existir', async () => {
+    await renderizar('/agendar?servico=nao-existe')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Escolha o serviço' })).toBeInTheDocument()
+    expect(continuar()).toBeDisabled()
+  })
+
   it('só permite continuar depois de escolher o serviço', async () => {
     const usuario = await renderizar('/agendar')
     expect(continuar()).toBeDisabled()

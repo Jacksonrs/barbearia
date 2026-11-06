@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/auth.ts'
+import { useAvisos } from '../contexts/avisos.ts'
 
 const anoAtual = new Date().getFullYear()
 
@@ -32,9 +33,13 @@ function Marca() {
   )
 }
 
-/** Rola até a seção do link (#servicos) ou volta ao topo ao trocar de página. */
+/**
+ * Rola até a seção do link (#servicos) ou volta ao topo ao trocar de página.
+ * Depende também de `key`: clicar de novo no mesmo link (ex.: "Serviços" depois de
+ * rolar para longe) gera uma nova navegação para o mesmo endereço e precisa rolar outra vez.
+ */
 function useRolagemPorRota() {
-  const { pathname, hash } = useLocation()
+  const { pathname, hash, key } = useLocation()
 
   useEffect(() => {
     if (hash) {
@@ -42,7 +47,7 @@ function useRolagemPorRota() {
     } else {
       window.scrollTo({ top: 0 })
     }
-  }, [pathname, hash])
+  }, [pathname, hash, key])
 }
 
 export default function Layout() {
@@ -50,10 +55,14 @@ export default function Layout() {
   const fecharMenu = () => setMenuAberto(false)
   const { usuario, sair } = useAuth()
   const navegar = useNavigate()
+  const avisar = useAvisos()
 
+  // Vai para o início antes de sair: se fosse depois, quem estivesse numa tela
+  // protegida seria jogado para /entrar (e essa página ficaria no histórico).
   function sairDaConta() {
     fecharMenu()
-    void sair().finally(() => navegar('/'))
+    navegar('/')
+    void sair().then(() => avisar('Você saiu da sua conta.', 'info'))
   }
 
   useRolagemPorRota()
@@ -150,7 +159,11 @@ export default function Layout() {
                 {link.rotulo}
               </Link>
             ))}
-            <Link to="/agendar">Agendar</Link>
+            {usuario?.papel === 'dono' ? (
+              <Link to="/painel">Painel</Link>
+            ) : (
+              <Link to="/agendar">Agendar</Link>
+            )}
           </nav>
         </div>
         <div className="container rodape-base">© {anoAtual} Jr Barber. Todos os direitos reservados.</div>
