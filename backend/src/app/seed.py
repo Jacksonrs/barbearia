@@ -2,6 +2,7 @@
 
 Iguais a frontend/src/services/dadosExemplo.ts. Troque pelos dados reais da Jr Barber.
 """
+import logging
 import uuid
 
 from sqlalchemy import select
@@ -9,8 +10,10 @@ from sqlalchemy.orm import Session
 
 from . import config
 from .models import Barbeiro, Expediente, Servico, Usuario
-from .seguranca import gerar_hash_senha
+from .seguranca import conferir_senha, gerar_hash_senha
 from .utils import agora_utc, normalizar_email
+
+log = logging.getLogger(__name__)
 
 SERVICOS = [
     ("corte", "Corte", "Na tesoura ou na máquina, com acabamento na navalha.", 30),
@@ -68,4 +71,29 @@ def popular(db: Session) -> None:
                 criado_em=agora_utc(),
             )
         )
+    db.flush()  # a sessão não faz flush sozinha: sem isso a conferência não vê o dono novo
+    _conferir_senha_padrao_do_dono(db)
     db.commit()
+
+
+def _conferir_senha_padrao_do_dono(db: Session) -> None:
+    """A senha de desenvolvimento não pode ir para produção.
+
+    - DONO_SENHA definida com outro valor: troca a senha padrão por ela (mesmo se o dono
+      já tiver sido criado antes com a padrão).
+    - Produção (COOKIE_SEGURO=1) ainda com a padrão: o servidor não sobe.
+    - Desenvolvimento: só avisa no log.
+    """
+    for dono in db.scalars(select(Usuario).where(Usuario.papel == "dono")):
+        if not conferir_senha(dono.senha_hash, config.DONO_SENHA_PADRAO):
+            continue
+        if config.DONO_SENHA != config.DONO_SENHA_PADRAO:
+            dono.senha_hash = gerar_hash_senha(config.DONO_SENHA)
+            log.info("Senha padrão do dono (%s) trocada pela de DONO_SENHA.", dono.email)
+        elif config.COOKIE_SEGURO:
+            raise RuntimeError(
+                f"O dono ({dono.email}) ainda usa a senha padrão. "
+                "Defina DONO_SENHA com uma senha forte antes de subir em produção."
+            )
+        else:
+            log.warning("O dono (%s) usa a senha padrão de desenvolvimento.", dono.email)

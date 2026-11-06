@@ -199,3 +199,11 @@ ou MSW).
 O cookie de sessão é `SameSite=Lax`: front e back precisam ficar **no mesmo
 domínio** (ex.: o servidor web entrega o `dist/` do front e repassa `/api` ao
 backend). Em HTTPS, subir o backend com `COOKIE_SEGURO=1`.
+
+Variáveis de produção:
+
+| Variável | Para quê |
+| --- | --- |
+| `COOKIE_SEGURO=1` | Cookies só por HTTPS |
+| `DONO_SENHA` | Senha do dono. Com `COOKIE_SEGURO=1`, o servidor **não sobe** se o dono ainda usar a senha padrão `jrbarber123`; definir `DONO_SENHA` troca a padrão pela nova |
+| `SEGREDO` | Valor fixo e aleatório que assina o cookie `jrbarber_dispositivo` (navegador onde a conta já entrou; é ele que impede alguém de travar o login de outra pessoa errando a senha). Sem ele, o cookie perde a validade a cada reinício |

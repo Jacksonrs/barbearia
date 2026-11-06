@@ -1,6 +1,7 @@
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -50,8 +51,13 @@ def cadastrar(dados: DadosCadastro, db: DB, resposta: Response):
     return usuario_saida(usuario)
 
 
+CookieDispositivo = Annotated[str | None, Cookie(alias=config.COOKIE_DISPOSITIVO)]
+
+
 @rota.post("/entrar", response_model=UsuarioSaida)
-def entrar(credenciais: Credenciais, db: DB, resposta: Response):
+def entrar(
+    credenciais: Credenciais, db: DB, resposta: Response, dispositivo: CookieDispositivo = None
+):
     if credenciais.tipo == "email":
         identificador = normalizar_email(credenciais.identificador)
         filtro = Usuario.email == identificador
@@ -62,7 +68,9 @@ def entrar(credenciais: Credenciais, db: DB, resposta: Response):
         mensagem = "Telefone ou senha incorretos."
 
     chave = f"{credenciais.tipo}:{identificador}"
-    if minutos := limite_login.minutos_bloqueado(chave):
+    # Navegador onde esta conta já entrou: tem contagem própria (ver limite_login.py).
+    chave_contagem = limite_login.chave_do_dispositivo(chave, dispositivo) or chave
+    if minutos := limite_login.minutos_bloqueado(chave_contagem):
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             f"Muitas tentativas de login. Tente novamente em {minutos} min.",
@@ -71,11 +79,20 @@ def entrar(credenciais: Credenciais, db: DB, resposta: Response):
     usuario = db.scalar(select(Usuario).where(filtro))
     # Mensagem igual para "não existe" e "senha errada": não revela quais contas existem.
     if not conferir_senha(usuario.senha_hash if usuario else None, credenciais.senha):
-        limite_login.registrar_falha(chave)
+        limite_login.registrar_falha(chave_contagem)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, mensagem)
 
-    limite_login.registrar_sucesso(chave)
+    limite_login.registrar_sucesso(chave, chave_contagem)
     abrir_sessao(db, usuario, resposta)
+    resposta.set_cookie(
+        config.COOKIE_DISPOSITIVO,
+        limite_login.novo_dispositivo(chave),
+        max_age=config.DISPOSITIVO_DIAS * 24 * 3600,
+        httponly=True,
+        secure=config.COOKIE_SEGURO,
+        samesite="lax",
+        path="/api/auth",
+    )
     return usuario_saida(usuario)
 
 
@@ -95,7 +112,9 @@ def entrar_com_google(dados: LoginGoogle, db: DB, resposta: Response):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Não foi possível entrar com o Google.")
 
     sub = info["sub"]
-    email = normalizar_email(info.get("email", "")) or None
+    # E-mail não verificado pelo Google pode ser de outra pessoa: não ocupa o e-mail no sistema.
+    email = normalizar_email(info.get("email", "")) if info.get("email_verified") else ""
+    email = email or None
     usuario = db.scalar(select(Usuario).where(Usuario.google_sub == sub))
 
     if not usuario:
@@ -109,7 +128,7 @@ def entrar_com_google(dados: LoginGoogle, db: DB, resposta: Response):
             )
         usuario = Usuario(
             id=str(uuid.uuid4()),
-            nome=info.get("name") or (email or "Cliente").split("@")[0],
+            nome=(info.get("name") or (email or "Cliente").split("@")[0])[:120],
             email=email,
             papel="cliente",
             provedor="google",

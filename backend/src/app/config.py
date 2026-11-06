@@ -1,5 +1,6 @@
 """Configurações lidas de variáveis de ambiente (com padrões para desenvolvimento)."""
 import os
+import secrets
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -19,12 +20,21 @@ SESSAO_DIAS = int(os.getenv("SESSAO_DIAS", "30"))
 # Em produção (HTTPS) deve ser "1".
 COOKIE_SEGURO = os.getenv("COOKIE_SEGURO", "0") == "1"
 
+# Navegador onde a conta já entrou (ver limite_login.py).
+COOKIE_DISPOSITIVO = "jrbarber_dispositivo"
+DISPOSITIVO_DIAS = 180
+# Assina o cookie do dispositivo. Sem a variável, muda a cada start (os navegadores só
+# perdem o "confiável" e voltam à contagem normal). Em produção, defina um valor fixo.
+SEGREDO = os.getenv("SEGREDO") or secrets.token_hex(32)
+
 # Login com Google: sem o Client ID, a rota responde 501.
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 
-# Conta do dono criada no primeiro start (troque a senha em produção!).
+# Conta do dono criada no primeiro start. A senha padrão só serve para desenvolvimento:
+# com COOKIE_SEGURO=1 o servidor não sobe enquanto o dono usar essa senha (ver seed.py).
 DONO_EMAIL = os.getenv("DONO_EMAIL", "dono@jrbarber.com")
-DONO_SENHA = os.getenv("DONO_SENHA", "jrbarber123")
+DONO_SENHA_PADRAO = "jrbarber123"
+DONO_SENHA = os.getenv("DONO_SENHA", DONO_SENHA_PADRAO)
 
 # Regras de agendamento (iguais às do frontend).
 INTERVALO_MIN = 30

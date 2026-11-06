@@ -42,7 +42,8 @@ def validar_telefone(telefone: str) -> str:
         raise ValueError("Informe seu telefone.")
     if n < 10:
         raise ValueError("Telefone incompleto. Inclua o DDD.")
-    if n > 11:
+    # O texto é guardado como digitado (coluna de 20 caracteres): limita também a máscara.
+    if n > 11 or len(telefone.strip()) > 20:
         raise ValueError("Telefone inválido.")
     return telefone.strip()
 
