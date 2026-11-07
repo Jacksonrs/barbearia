@@ -1,5 +1,10 @@
 # Guia de integração: frontend ↔ backend
 
+> **Situação:** a integração descrita nos itens 1 a 4 e 6 **já foi feita**. Este
+> arquivo fica como registro das convenções da API (seção abaixo) e dos itens ainda
+> abertos: o login com Google (item 5) e a produção (item 7). Para rodar o projeto,
+> veja o [README principal](../README.md#como-rodar-no-computador).
+
 O backend já implementa todas as rotas do `frontend/README.md`, com os mesmos
 formatos de `frontend/src/types/` e as mesmas mensagens de erro do mock.
 Este guia lista **o que precisa mudar no front** para deixar de usar o
@@ -11,7 +16,7 @@ Este guia lista **o que precisa mudar no front** para deixar de usar o
 ```bash
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate        # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --app-dir src
 ```

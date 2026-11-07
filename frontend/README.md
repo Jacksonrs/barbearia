@@ -19,12 +19,8 @@ npm install      # instala as dependências (só na primeira vez)
 npm run dev      # abre em http://localhost:5173
 ```
 
-O site precisa do backend rodando ao mesmo tempo (ver `backend/INTEGRACAO_FRONTEND.md`):
-
-```bash
-cd backend && source .venv/bin/activate
-uvicorn app.main:app --reload --app-dir src
-```
+O site precisa do backend rodando ao mesmo tempo. Os comandos para Windows e
+Linux/macOS estão no [README principal](../README.md#como-rodar-no-computador).
 
 ## Comandos
 
