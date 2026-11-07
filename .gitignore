@@ -1,0 +1,5 @@
+# Segredos locais (ex.: gerados pelo neon deploy)
+.env
+.env.*
+.neon
+node_modules/

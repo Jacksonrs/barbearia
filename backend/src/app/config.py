@@ -10,6 +10,12 @@ RAIZ_REPOSITORIO = Path(__file__).resolve().parents[3]
 DATABASE_URL = os.getenv(
     "DATABASE_URL", f"sqlite:///{RAIZ_REPOSITORIO / 'database' / 'barbearia.db'}"
 )
+# Neon/Render entregam "postgres://" ou "postgresql://"; o SQLAlchemy precisa
+# saber que o driver é o psycopg 3.
+for _prefixo in ("postgres://", "postgresql://"):
+    if DATABASE_URL.startswith(_prefixo):
+        DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL[len(_prefixo):]
+        break
 
 # Todas as regras de horário ("30 min antes", "2h antes") usam o fuso da barbearia.
 FUSO = ZoneInfo(os.getenv("FUSO", "America/Sao_Paulo"))

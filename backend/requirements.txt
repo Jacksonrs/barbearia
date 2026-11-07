@@ -6,3 +6,5 @@ google-auth>=2.62
 requests>=2.34
 # Fusos horários no Windows (no Linux/macOS o sistema já tem).
 tzdata>=2026.6
+# Driver do Postgres (Neon) em produção.
+psycopg[binary]>=3.2
