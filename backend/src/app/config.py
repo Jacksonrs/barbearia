@@ -7,6 +7,24 @@ from zoneinfo import ZoneInfo
 
 RAIZ_REPOSITORIO = Path(__file__).resolve().parents[3]
 
+
+def _carregar_env_local() -> None:
+    """Lê o .env.local da raiz (criado pelo `neon deploy`), para o backend local usar
+    o mesmo banco do Neon sem precisar exportar nada. Variáveis já definidas no
+    ambiente (ex.: no Render ou nos testes) têm prioridade e não são sobrescritas."""
+    arquivo = RAIZ_REPOSITORIO / ".env.local"
+    if not arquivo.is_file():
+        return
+    for linha in arquivo.read_text(encoding="utf-8").splitlines():
+        linha = linha.strip()
+        if not linha or linha.startswith("#") or "=" not in linha:
+            continue
+        chave, valor = linha.removeprefix("export ").split("=", 1)
+        os.environ.setdefault(chave.strip(), valor.strip().strip("\"'"))
+
+
+_carregar_env_local()
+
 DATABASE_URL = os.getenv(
     "DATABASE_URL", f"sqlite:///{RAIZ_REPOSITORIO / 'database' / 'barbearia.db'}"
 )

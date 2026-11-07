@@ -3,7 +3,12 @@ os dados iniciais do seed e um relógio fixo que o próprio teste pode adiantar.
 
 Rodar (dentro de backend/):  .venv/bin/pytest
 """
+import os
 from datetime import date, datetime
+
+# Antes de importar o app: os testes NUNCA usam o banco do .env.local (Neon de produção).
+# O config.py não sobrescreve variáveis já definidas.
+os.environ["DATABASE_URL"] = "sqlite://"
 
 import pytest
 from argon2 import PasswordHasher
