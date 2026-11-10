@@ -43,6 +43,8 @@ class Servico(Base):
     nome: Mapped[str] = mapped_column(String(40))
     descricao: Mapped[str] = mapped_column(String(120))
     duracao_min: Mapped[int] = mapped_column(Integer)
+    # Em centavos para não ter erro de arredondamento (R$ 45,00 = 4500). 0 = sem preço definido.
+    preco_centavos: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     ativo: Mapped[bool] = mapped_column(Boolean, default=True)
     # Ordem de exibição (novos serviços entram no fim).
     ordem: Mapped[int] = mapped_column(Integer, default=0)

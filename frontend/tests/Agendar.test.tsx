@@ -44,7 +44,7 @@ describe('Agendamento', () => {
     await renderizar('/agendar?servico=barba')
     expect(await screen.findByRole('heading', { level: 2, name: 'Escolha o barbeiro' })).toBeInTheDocument()
     const resumo = screen.getByRole('complementary', { name: 'Resumo do agendamento' })
-    expect(await within(resumo).findByText('Barba · 30 min')).toBeInTheDocument()
+    expect(await within(resumo).findByText(/^Barba · 30 min · R\$\s30,00$/)).toBeInTheDocument()
   })
 
   it('volta para a escolha do serviço se o do endereço não existir', async () => {
@@ -64,7 +64,7 @@ describe('Agendamento', () => {
     const usuario = await renderizar('/agendar')
     await usuario.click(await screen.findByRole('radio', { name: 'Barba' }))
     const resumo = screen.getByRole('complementary', { name: 'Resumo do agendamento' })
-    expect(within(resumo).getByText('Barba · 30 min')).toBeInTheDocument()
+    expect(within(resumo).getByText(/^Barba · 30 min · R\$\s30,00$/)).toBeInTheDocument()
   })
 
   it('mostra o resumo curto e permite abrir o resumo completo (celular)', async () => {

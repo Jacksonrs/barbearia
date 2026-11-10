@@ -12,6 +12,7 @@ export const servicosExemplo: Servico[] = [
     nome: 'Corte',
     descricao: 'Na tesoura ou na máquina, com acabamento na navalha.',
     duracaoMin: 30,
+    precoCentavos: 4000,
     ativo: true,
   },
   {
@@ -19,6 +20,7 @@ export const servicosExemplo: Servico[] = [
     nome: 'Barba',
     descricao: 'Toalha quente, navalha e hidratação.',
     duracaoMin: 30,
+    precoCentavos: 3000,
     ativo: true,
   },
   {
@@ -26,6 +28,7 @@ export const servicosExemplo: Servico[] = [
     nome: 'Corte + Barba',
     descricao: 'O serviço completo em um único horário.',
     duracaoMin: 60,
+    precoCentavos: 6500,
     ativo: true,
   },
 ]

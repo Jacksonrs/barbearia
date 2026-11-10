@@ -6,8 +6,14 @@ import pytest
 from conftest import QUARTA, TERCA, agendar, novo_cliente
 
 
-def servico(nome="Pigmentação", descricao="Cobre falhas da barba.", duracao=45, ativo=True):
-    return {"nome": nome, "descricao": descricao, "duracaoMin": duracao, "ativo": ativo}
+def servico(nome="Pigmentação", descricao="Cobre falhas da barba.", duracao=45, ativo=True, preco=5000):
+    return {
+        "nome": nome,
+        "descricao": descricao,
+        "duracaoMin": duracao,
+        "precoCentavos": preco,
+        "ativo": ativo,
+    }
 
 
 @pytest.mark.parametrize(
@@ -55,6 +61,7 @@ def test_cria_servico(dono, anonimo):
         "nome": "Pigmentação",
         "descricao": "Cobre falhas da barba.",
         "duracaoMin": 45,
+        "precoCentavos": 5000,
         "ativo": True,
     }
     assert anonimo.get("/api/servicos").json()[-1]["id"] == "pigmentacao"  # entra no fim
@@ -81,6 +88,9 @@ def test_nome_repetido(dono):
         (servico(descricao="abc"), "Escreva uma descrição curta."),
         (servico(descricao="a" * 121), "A descrição pode ter no máximo 120 caracteres."),
         (servico(duracao=20), "Duração inválida."),
+        (servico(preco=-1), "Preço inválido."),
+        (servico(preco=100_001), "Preço inválido."),
+        (servico(preco=45.5), "Valor inválido."),
     ],
 )
 def test_validacoes_do_servico(dono, dados, mensagem):
@@ -127,3 +137,21 @@ def test_mesmo_nome_salvo_ao_mesmo_tempo(dono):
     for t in threads:
         t.join()
     assert sorted(resultados) == [201] + [409] * 5
+
+
+def test_preco_do_servico(dono, anonimo):
+    assert {s["id"]: s["precoCentavos"] for s in anonimo.get("/api/servicos").json()} == {
+        "corte": 4000,
+        "barba": 3000,
+        "corte-barba": 6500,
+    }
+    r = dono.put("/api/painel/servicos/corte", json=servico("Corte", duracao=30, preco=4500))
+    assert r.status_code == 200 and r.json()["precoCentavos"] == 4500
+    assert anonimo.get("/api/servicos").json()[0]["precoCentavos"] == 4500
+
+
+def test_preco_e_opcional_para_clientes_antigos(dono):
+    dados = servico("Sobrancelha")
+    del dados["precoCentavos"]
+    r = dono.post("/api/painel/servicos", json=dados)
+    assert r.status_code == 201 and r.json()["precoCentavos"] == 0

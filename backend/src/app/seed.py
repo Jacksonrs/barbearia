@@ -16,9 +16,10 @@ from .utils import agora_utc, normalizar_email
 log = logging.getLogger(__name__)
 
 SERVICOS = [
-    ("corte", "Corte", "Na tesoura ou na máquina, com acabamento na navalha.", 30),
-    ("barba", "Barba", "Toalha quente, navalha e hidratação.", 30),
-    ("corte-barba", "Corte + Barba", "O serviço completo em um único horário.", 60),
+    # (id, nome, descrição, duração em minutos, preço em centavos)
+    ("corte", "Corte", "Na tesoura ou na máquina, com acabamento na navalha.", 30, 4000),
+    ("barba", "Barba", "Toalha quente, navalha e hidratação.", 30, 3000),
+    ("corte-barba", "Corte + Barba", "O serviço completo em um único horário.", 60, 6500),
 ]
 
 BARBEIROS = [
@@ -46,8 +47,8 @@ def _vazia(db: Session, modelo) -> bool:
 def popular(db: Session) -> None:
     if _vazia(db, Servico):
         db.add_all(
-            Servico(id=i, nome=n, descricao=d, duracao_min=m, ativo=True, ordem=k)
-            for k, (i, n, d, m) in enumerate(SERVICOS)
+            Servico(id=i, nome=n, descricao=d, duracao_min=m, preco_centavos=p, ativo=True, ordem=k)
+            for k, (i, n, d, m, p) in enumerate(SERVICOS)
         )
     if _vazia(db, Barbeiro):
         db.add_all(

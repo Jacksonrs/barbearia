@@ -1,6 +1,7 @@
-import { Check, Clock } from 'lucide-react'
+import { Banknote, Check, Clock } from 'lucide-react'
 import type { Servico } from '../../types/agendamento.ts'
 import { formatarDuracao } from '../../utils/datas.ts'
+import { formatarPreco } from '../../utils/preco.ts'
 import { iconeDoServico } from './iconesServico.ts'
 
 type Props = {
@@ -40,6 +41,12 @@ export default function EtapaServico({ servicos, selecionado, onSelecionar }: Pr
                 </span>
                 <span className="opcao-meta">
                   <Clock size={14} aria-hidden="true" /> {formatarDuracao(servico.duracaoMin)}
+                  {servico.precoCentavos > 0 && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <Banknote size={14} aria-hidden="true" /> {formatarPreco(servico.precoCentavos)}
+                    </>
+                  )}
                 </span>
               </span>
               <span className="opcao-check" aria-hidden="true">

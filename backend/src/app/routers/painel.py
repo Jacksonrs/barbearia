@@ -55,6 +55,7 @@ def criar_servico(dados: DadosServico, db: DB):
             nome=dados.nome,
             descricao=dados.descricao,
             duracao_min=dados.duracao_min,
+            preco_centavos=dados.preco_centavos,
             ativo=dados.ativo,
             ordem=(db.scalar(select(func.max(Servico.ordem))) or 0) + 1,
         )
@@ -76,6 +77,7 @@ def atualizar_servico(servico_id: str, dados: DadosServico, db: DB):
         servico.nome = dados.nome
         servico.descricao = dados.descricao
         servico.duracao_min = dados.duracao_min
+        servico.preco_centavos = dados.preco_centavos
         servico.ativo = dados.ativo
         db.commit()
     return servico_saida(servico)

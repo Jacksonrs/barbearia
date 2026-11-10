@@ -8,6 +8,8 @@ export type Servico = {
   nome: string
   descricao: string
   duracaoMin: number
+  /** Preço em centavos (4500 = R$ 45,00). 0 = sem preço definido, não é mostrado. */
+  precoCentavos: number
   /** Serviços inativos não aparecem para os clientes, mas continuam no histórico. */
   ativo: boolean
 }

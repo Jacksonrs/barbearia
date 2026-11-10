@@ -205,10 +205,30 @@ describe('Painel do dono', () => {
     await usuario.type(within(form).getByLabelText('Nome'), 'Sobrancelha')
     await usuario.type(within(form).getByLabelText('Descrição'), 'Alinhamento na navalha.')
     await usuario.selectOptions(within(form).getByLabelText('Duração'), '15')
+    await usuario.type(within(form).getByLabelText('Preço (R$)'), '25,50')
     await usuario.click(within(form).getByRole('button', { name: 'Salvar serviço' }))
 
-    expect(await screen.findByRole('heading', { level: 3, name: 'Sobrancelha' })).toBeInTheDocument()
-    expect((await listarServicos()).map((s) => s.nome)).toContain('Sobrancelha')
+    const item = (await screen.findByRole('heading', { level: 3, name: 'Sobrancelha' })).closest('li')!
+    expect(within(item).getByText(/R\$\s25,50/)).toBeInTheDocument()
+    const criado = (await listarServicos()).find((s) => s.nome === 'Sobrancelha')
+    expect(criado?.precoCentavos).toBe(2550)
+  })
+
+  it('não salva serviço sem preço válido', async () => {
+    await entrarComoDono()
+    const usuario = await renderizar('/painel/servicos')
+
+    await usuario.click(await screen.findByRole('button', { name: 'Novo serviço' }))
+    const form = screen.getByRole('form', { name: 'Novo serviço' })
+    await usuario.type(within(form).getByLabelText('Nome'), 'Sobrancelha')
+    await usuario.type(within(form).getByLabelText('Descrição'), 'Alinhamento na navalha.')
+    await usuario.click(within(form).getByRole('button', { name: 'Salvar serviço' }))
+    expect(within(form).getByText('Informe o preço.')).toBeInTheDocument()
+    expect(within(form).getByLabelText('Preço (R$)')).toHaveFocus()
+
+    await usuario.type(within(form).getByLabelText('Preço (R$)'), 'abc')
+    expect(within(form).getByText('Use só números, ex.: 45 ou 45,50.')).toBeInTheDocument()
+    expect((await listarServicos()).map((s) => s.nome)).not.toContain('Sobrancelha')
   })
 
   it('desativa um serviço e ele some do agendamento', async () => {

@@ -34,6 +34,7 @@ erDiagram
         varchar40 nome
         varchar120 descricao
         int duracao_min
+        int preco_centavos "0 = sem preço"
         boolean ativo
         int ordem
     }

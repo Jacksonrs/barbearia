@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, Scissors, UserRound } from 'lucide-react'
+import { ArrowRight, Banknote, Clock, Scissors, UserRound } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import CarregandoPagina from '../components/CarregandoPagina.tsx'
@@ -11,6 +11,7 @@ import { useRecurso } from '../hooks/useRecurso.ts'
 import { useTitulo } from '../hooks/useTitulo.ts'
 import { listarServicos } from '../services/agendamentoApi.ts'
 import { formatarDuracao } from '../utils/datas.ts'
+import { formatarPreco } from '../utils/preco.ts'
 
 const passos = [
   { titulo: 'Escolha o serviço', descricao: 'Corte, barba ou o combo completo.', icone: Scissors },
@@ -112,7 +113,7 @@ export default function Inicio() {
           )}
           {servicos.dados && (
             <ul className="grade-servicos">
-              {servicos.dados.map(({ id, nome, descricao, duracaoMin }) => {
+              {servicos.dados.map(({ id, nome, descricao, duracaoMin, precoCentavos }) => {
                 const Icone = iconeDoServico(id)
                 return (
                   <li key={id} className="cartao-servico">
@@ -123,6 +124,12 @@ export default function Inicio() {
                     <p>{descricao}</p>
                     <span className="opcao-meta">
                       <Clock size={14} aria-hidden="true" /> {formatarDuracao(duracaoMin)}
+                      {precoCentavos > 0 && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <Banknote size={14} aria-hidden="true" /> {formatarPreco(precoCentavos)}
+                        </>
+                      )}
                     </span>
                     <LinkAgendar
                       para={`/agendar?servico=${encodeURIComponent(id)}`}

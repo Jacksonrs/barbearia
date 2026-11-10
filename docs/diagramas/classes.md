@@ -30,6 +30,7 @@ classDiagram
         +String nome
         +String descricao
         +int duracaoMin
+        +int precoCentavos
         +bool ativo
         +int ordem
     }

@@ -18,6 +18,8 @@ Papel = Literal["cliente", "dono"]
 
 RE_EMAIL = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 RE_HORA = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+# R$ 1.000,00: acima disso é quase certo erro de digitação.
+PRECO_MAXIMO_CENTAVOS = 100_000
 
 
 class Esquema(BaseModel):
@@ -106,6 +108,7 @@ class ServicoSaida(Esquema):
     nome: str
     descricao: str
     duracao_min: int
+    preco_centavos: int
     ativo: bool
 
 
@@ -113,6 +116,7 @@ class DadosServico(Esquema):
     nome: str
     descricao: str
     duracao_min: int
+    preco_centavos: int = 0
     ativo: bool = True
 
     @field_validator("nome")
@@ -141,6 +145,13 @@ class DadosServico(Esquema):
         if duracao not in config.DURACOES_PERMITIDAS:
             raise ValueError("Duração inválida.")
         return duracao
+
+    @field_validator("preco_centavos")
+    @classmethod
+    def _preco(cls, preco: int) -> int:
+        if not 0 <= preco <= PRECO_MAXIMO_CENTAVOS:
+            raise ValueError("Preço inválido.")
+        return preco
 
 
 class BarbeiroSaida(Esquema):

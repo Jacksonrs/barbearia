@@ -18,7 +18,12 @@ def usuario_saida(u: Usuario) -> UsuarioSaida:
 
 def servico_saida(s: Servico) -> ServicoSaida:
     return ServicoSaida(
-        id=s.id, nome=s.nome, descricao=s.descricao, duracao_min=s.duracao_min, ativo=s.ativo
+        id=s.id,
+        nome=s.nome,
+        descricao=s.descricao,
+        duracao_min=s.duracao_min,
+        preco_centavos=s.preco_centavos,
+        ativo=s.ativo,
     )
 
 

@@ -1,4 +1,4 @@
-import { AlertCircle, Clock, Loader2, Pencil, Plus } from 'lucide-react'
+import { AlertCircle, Banknote, Clock, Loader2, Pencil, Plus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import Campo from '../../components/Campo.tsx'
 import { ErroCarregamento, Esqueleto } from '../../components/agendamento/Estados.tsx'
@@ -8,6 +8,7 @@ import { useTitulo } from '../../hooks/useTitulo.ts'
 import { listarTodosServicos, salvarServico, type DadosServico } from '../../services/painelApi.ts'
 import type { Servico } from '../../types/agendamento.ts'
 import { formatarDuracao } from '../../utils/datas.ts'
+import { PRECO_MAXIMO_CENTAVOS, formatarPreco, lerPreco, precoParaCampo } from '../../utils/preco.ts'
 
 const DURACOES = [15, 30, 45, 60, 75, 90, 120]
 const NOVO = 'novo'
@@ -21,26 +22,37 @@ type PropsFormulario = {
 
 function FormularioServico({ inicial, titulo, onSalvar, onCancelar }: PropsFormulario) {
   const [dados, setDados] = useState(inicial)
+  // O preço fica como texto enquanto é digitado ("45,5") e só vira centavos ao salvar.
+  const [precoTexto, setPrecoTexto] = useState(() => precoParaCampo(inicial.precoCentavos))
   const [mostrarErros, setMostrarErros] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
 
+  const precoCentavos = lerPreco(precoTexto)
   const erros = {
     nome: dados.nome.trim().length < 2 ? 'Informe o nome do serviço.' : undefined,
+    preco: !precoTexto.trim()
+      ? 'Informe o preço.'
+      : precoCentavos === null
+        ? 'Use só números, ex.: 45 ou 45,50.'
+        : precoCentavos <= 0 || precoCentavos > PRECO_MAXIMO_CENTAVOS
+          ? `O preço deve ficar entre R$ 0,01 e ${formatarPreco(PRECO_MAXIMO_CENTAVOS)}.`
+          : undefined,
     descricao: dados.descricao.trim().length < 5 ? 'Escreva uma descrição curta.' : undefined,
   }
 
   async function aoEnviar(evento: FormEvent) {
     evento.preventDefault()
-    if (erros.nome || erros.descricao) {
+    const primeiroErro = (['nome', 'preco', 'descricao'] as const).find((campo) => erros[campo])
+    if (primeiroErro || precoCentavos === null) {
       setMostrarErros(true)
-      document.getElementById(erros.nome ? 'servico-nome' : 'servico-descricao')?.focus()
+      document.getElementById(`servico-${primeiroErro ?? 'preco'}`)?.focus()
       return
     }
     setErro(null)
     setSalvando(true)
     try {
-      await onSalvar(dados)
+      await onSalvar({ ...dados, precoCentavos })
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível salvar.')
       setSalvando(false)
@@ -76,6 +88,20 @@ function FormularioServico({ inicial, titulo, onSalvar, onCancelar }: PropsFormu
                 </option>
               ))}
             </select>
+          )}
+        </Campo>
+
+        <Campo id="servico-preco" rotulo="Preço (R$)" erro={mostrarErros ? erros.preco : undefined}>
+          {(props) => (
+            <input
+              {...props}
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
+              maxLength={12}
+              value={precoTexto}
+              onChange={(e) => setPrecoTexto(e.target.value)}
+            />
           )}
         </Campo>
 
@@ -180,7 +206,7 @@ export default function Servicos() {
       {editando === NOVO && (
         <FormularioServico
           titulo="Novo serviço"
-          inicial={{ nome: '', descricao: '', duracaoMin: 30, ativo: true }}
+          inicial={{ nome: '', descricao: '', duracaoMin: 30, precoCentavos: 0, ativo: true }}
           onSalvar={(dados) => salvar(dados)}
           onCancelar={() => setEditando(null)}
         />
@@ -215,6 +241,14 @@ export default function Servicos() {
                   <p>{servico.descricao}</p>
                   <span className="opcao-meta">
                     <Clock size={14} aria-hidden="true" /> {formatarDuracao(servico.duracaoMin)}
+                    <span aria-hidden="true">·</span>
+                    {servico.precoCentavos > 0 ? (
+                      <>
+                        <Banknote size={14} aria-hidden="true" /> {formatarPreco(servico.precoCentavos)}
+                      </>
+                    ) : (
+                      <span className="opcao-meta-pendente">Sem preço — edite para definir</span>
+                    )}
                   </span>
                 </div>
                 <div className="item-servico-acoes">

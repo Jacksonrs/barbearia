@@ -20,6 +20,7 @@ import { SEM_PREFERENCIA, type Agendamento, type DadosCliente } from '../types/a
 import type { Usuario } from '../types/usuario.ts'
 import { validarCliente } from '../utils/cliente.ts'
 import { formatarDataCurta, formatarDataLonga, formatarDuracao } from '../utils/datas.ts'
+import { formatarPreco } from '../utils/preco.ts'
 
 const ULTIMA_ETAPA = ETAPAS.length - 1
 
@@ -157,7 +158,15 @@ export default function Agendar() {
 
   const itens = (barbeiroId: string | null) =>
     itensResumo({
-      servico: servico ? `${servico.nome} · ${formatarDuracao(servico.duracaoMin)}` : null,
+      servico: servico
+        ? [
+            servico.nome,
+            formatarDuracao(servico.duracaoMin),
+            servico.precoCentavos > 0 && formatarPreco(servico.precoCentavos),
+          ]
+            .filter(Boolean)
+            .join(' · ')
+        : null,
       barbeiro: nomeBarbeiro(barbeiroId),
       data: estado.data ? formatarDataLonga(estado.data) : null,
       hora: estado.hora,

@@ -21,6 +21,7 @@ def test_servicos_ativos_em_camel_case(anonimo):
         "nome": "Corte",
         "descricao": "Na tesoura ou na máquina, com acabamento na navalha.",
         "duracaoMin": 30,
+        "precoCentavos": 4000,
         "ativo": True,
     }
 

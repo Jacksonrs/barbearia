@@ -657,12 +657,17 @@
 
 .form-servico-campos {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr;
   gap: 18px;
 }
 
-.form-servico-campos > :nth-child(n + 3) {
+.form-servico-campos > :nth-child(n + 4) {
   grid-column: 1 / -1;
+}
+
+.opcao-meta-pendente {
+  color: var(--cor-texto-suave);
+  font-style: italic;
 }
 
 .form-servico-acoes {
