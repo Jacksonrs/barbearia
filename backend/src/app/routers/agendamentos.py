@@ -81,6 +81,7 @@ def criar(novo: NovoAgendamento, db: DB, usuario: UsuarioLogado, agora: Agora):
             hora=novo.hora,
             servico_nome=servico.nome,
             duracao_min=servico.duracao_min,
+            preco_centavos=servico.preco_centavos,
             cliente_nome=novo.cliente.nome,
             cliente_telefone=novo.cliente.telefone,
             cliente_email=novo.cliente.email,

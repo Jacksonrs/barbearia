@@ -4,6 +4,8 @@ import { criarAgendamento, listarServicos } from '../src/services/agendamentoApi
 import * as authApi from '../src/services/authApi.ts'
 import { donoExemplo } from './dados/dadosExemplo.ts'
 import { SEM_PREFERENCIA } from '../src/types/agendamento.ts'
+import { formatarPreco } from '../src/utils/preco.ts'
+import { lerBanco } from './dados/armazenamento.ts'
 import {
   CLIENTE,
   entrarComoCliente,
@@ -244,5 +246,48 @@ describe('Painel do dono', () => {
       expect(within(atualizado).getByText('Inativo')).toBeInTheDocument()
     })
     expect((await listarServicos()).map((s) => s.nome)).not.toContain('Barba')
+  })
+
+  it('mostra o relatório do período escolhido', async () => {
+    const cliente = await entrarComoCliente()
+    const { data, hora } = await primeiroHorarioLivre()
+    await criarAgendamento({
+      servicoId: 'corte',
+      barbeiroId: SEM_PREFERENCIA,
+      data,
+      hora,
+      cliente: { nome: cliente.nome, telefone: cliente.telefone, email: '', observacao: '' },
+    })
+    const corte = (await listarServicos()).find((s) => s.id === 'corte')!
+    await entrarComoDono()
+
+    const usuario = await renderizar('/painel')
+    await usuario.click(screen.getByRole('link', { name: 'Relatórios' }))
+    fireEvent.change(screen.getByLabelText('De'), { target: { value: data } })
+    fireEvent.change(screen.getByLabelText('Até'), { target: { value: data } })
+
+    // O banco de exemplo já traz outros agendamentos: compara com o que está nele.
+    const confirmados = lerBanco().agendamentos.filter((a) => a.data === data && a.status === 'confirmado')
+    const precos = Object.fromEntries(lerBanco().servicos.map((s) => [s.id, s.precoCentavos]))
+    const total = confirmados.reduce((soma, a) => soma + precos[a.servicoId], 0)
+    expect(confirmados.some((a) => a.servicoId === corte.id)).toBe(true)
+
+    const atendimentos = (await screen.findByText('Atendimentos')).closest('div')!
+    expect(within(atendimentos).getByText(String(confirmados.length))).toBeInTheDocument()
+    const faturamento = screen.getByText('Faturamento').closest('div')!
+    expect(within(faturamento).getByText(formatarPreco(total).replace(/\s/g, ' '))).toBeInTheDocument()
+
+    const servicos = screen.getByRole('region', { name: 'Serviços' })
+    expect(within(servicos).getByText('Corte')).toBeInTheDocument()
+    const frequentes = screen.getByRole('region', { name: 'Clientes mais frequentes' })
+    expect(within(frequentes).getByText('Maria Souza')).toBeInTheDocument()
+  })
+
+  it('avisa quando o período do relatório é inválido', async () => {
+    await entrarComoDono()
+    await renderizar('/painel/relatorios')
+    fireEvent.change(screen.getByLabelText('De'), { target: { value: '2026-12-10' } })
+    fireEvent.change(screen.getByLabelText('Até'), { target: { value: '2026-12-01' } })
+    expect(screen.getByRole('alert')).toHaveTextContent('A data final precisa ser igual ou depois da inicial.')
   })
 })

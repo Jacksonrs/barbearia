@@ -61,6 +61,7 @@ erDiagram
         varchar5 hora "HH:MM"
         varchar40 servico_nome "cópia"
         int duracao_min "cópia"
+        int preco_centavos "cópia"
         varchar120 cliente_nome
         varchar20 cliente_telefone
         varchar254 cliente_email

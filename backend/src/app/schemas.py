@@ -226,3 +226,56 @@ class AgendamentoSaida(Esquema):
     status: Literal["confirmado", "cancelado"]
     criado_em: datetime
     cancelado_por: Papel | None = None
+
+
+# ---------- relatórios (painel) ----------
+
+
+class ItemRelatorio(Esquema):
+    id: str
+    nome: str
+    quantidade: int
+    faturamento_centavos: int
+
+
+class DiaRelatorio(Esquema):
+    data: date
+    quantidade: int
+    faturamento_centavos: int
+
+
+class HoraRelatorio(Esquema):
+    hora: str  # "HH:00": agendamentos que começam dentro dessa hora
+    quantidade: int
+
+
+class ClienteRelatorio(Esquema):
+    nome: str
+    telefone: str
+    quantidade: int
+
+
+class RelatorioSaida(Esquema):
+    """Números de um período. Só agendamentos confirmados contam como atendimento."""
+
+    inicio: date
+    fim: date
+    agendamentos: int
+    cancelados: int
+    cancelados_pelo_cliente: int
+    # Soma dos preços dos confirmados (o preço gravado no dia em que foram marcados).
+    faturamento_centavos: int
+    # Parte do faturamento de horários que já começaram (o resto ainda está por vir).
+    faturamento_realizado_centavos: int
+    ticket_medio_centavos: int
+    clientes: int
+    # Clientes cujo primeiro agendamento confirmado na barbearia caiu neste período.
+    clientes_novos: int
+    por_servico: list[ItemRelatorio]
+    por_barbeiro: list[ItemRelatorio]
+    # 7 posições, 0 = domingo.
+    por_dia_semana: list[int]
+    por_hora: list[HoraRelatorio]
+    # Todos os dias do período, inclusive os sem movimento.
+    por_dia: list[DiaRelatorio]
+    clientes_frequentes: list[ClienteRelatorio]

@@ -85,6 +85,8 @@ class Agendamento(Base):
     # Cópias do momento do agendamento (o serviço pode mudar depois).
     servico_nome: Mapped[str] = mapped_column(String(40))
     duracao_min: Mapped[int] = mapped_column(Integer)
+    # Preço do serviço no dia em que foi marcado: mudar o preço depois não altera os relatórios.
+    preco_centavos: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     # Dados de contato informados neste agendamento (podem diferir da conta).
     cliente_nome: Mapped[str] = mapped_column(String(120))

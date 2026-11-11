@@ -1,9 +1,12 @@
-"""Painel do dono: agenda do dia e cadastro de serviços."""
+"""Painel do dono: agenda do dia, cadastro de serviços e relatórios."""
 import threading
+from datetime import date
 
 import pytest
 
 from conftest import QUARTA, TERCA, agendar, novo_cliente
+
+SEXTA = date(2026, 11, 13)
 
 
 def servico(nome="Pigmentação", descricao="Cobre falhas da barba.", duracao=45, ativo=True, preco=5000):
@@ -23,6 +26,7 @@ def servico(nome="Pigmentação", descricao="Cobre falhas da barba.", duracao=45
         ("get", "/api/painel/servicos"),
         ("post", "/api/painel/servicos"),
         ("put", "/api/painel/servicos/corte"),
+        ("get", "/api/painel/relatorio?inicio=2026-11-01&fim=2026-11-30"),
     ],
 )
 def test_so_o_dono_acessa(anonimo, cliente, metodo, caminho):
@@ -155,3 +159,83 @@ def test_preco_e_opcional_para_clientes_antigos(dono):
     del dados["precoCentavos"]
     r = dono.post("/api/painel/servicos", json=dados)
     assert r.status_code == 201 and r.json()["precoCentavos"] == 0
+
+
+# ---------- relatórios ----------
+
+
+def relatorio(dono, inicio=TERCA, fim=QUARTA):
+    r = dono.get("/api/painel/relatorio", params={"inicio": inicio.isoformat(), "fim": fim.isoformat()})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_relatorio_vazio(dono):
+    r = relatorio(dono)
+    assert r["agendamentos"] == 0 and r["faturamentoCentavos"] == 0 and r["ticketMedioCentavos"] == 0
+    assert r["porServico"] == [] and r["clientesFrequentes"] == []
+    assert r["porDiaSemana"] == [0] * 7
+    assert [d["data"] for d in r["porDia"]] == [TERCA.isoformat(), QUARTA.isoformat()]
+
+
+def test_relatorio_do_periodo(dono, cliente, outro_cliente, relogio):
+    agendar(cliente, hora="10:00", servico="corte", barbeiro="junior")  # R$ 40
+    agendar(outro_cliente, hora="10:00", servico="barba", barbeiro="rafael",
+            telefone="(21) 91111-2222", nome="Outra Pessoa")  # R$ 30
+    agendar(cliente, hora="15:30", data=QUARTA, servico="corte-barba", barbeiro="junior")  # R$ 65
+    cancelado = agendar(outro_cliente, hora="16:00", data=QUARTA, servico="corte", barbeiro="lucas",
+                        telefone="(21) 91111-2222", nome="Outra Pessoa").json()["id"]
+    outro_cliente.post(f"/api/agendamentos/{cancelado}/cancelar")
+    # Fora do período: não entra.
+    agendar(cliente, hora="10:00", data=SEXTA, servico="corte")
+
+    relogio.ir_para(TERCA, "12:00")
+    r = relatorio(dono)
+
+    assert (r["agendamentos"], r["cancelados"], r["canceladosPeloCliente"]) == (3, 1, 1)
+    assert r["faturamentoCentavos"] == 13500
+    assert r["faturamentoRealizadoCentavos"] == 7000  # só os dois de terça já passaram
+    assert r["ticketMedioCentavos"] == 4500
+    assert (r["clientes"], r["clientesNovos"]) == (2, 2)
+
+    assert [(s["id"], s["quantidade"], s["faturamentoCentavos"]) for s in r["porServico"]] == [
+        ("corte-barba", 1, 6500),
+        ("corte", 1, 4000),
+        ("barba", 1, 3000),
+    ]
+    assert [(b["nome"], b["quantidade"]) for b in r["porBarbeiro"]] == [("Junior", 2), ("Rafael", 1)]
+    assert r["porDiaSemana"] == [0, 0, 2, 1, 0, 0, 0]
+    assert r["porHora"] == [{"hora": "10:00", "quantidade": 2}, {"hora": "15:00", "quantidade": 1}]
+    assert [(d["quantidade"], d["faturamentoCentavos"]) for d in r["porDia"]] == [(2, 7000), (1, 6500)]
+    assert [(c["nome"], c["quantidade"]) for c in r["clientesFrequentes"]] == [
+        ("Cliente Teste", 2),
+        ("Outra Pessoa", 1),
+    ]
+
+
+def test_relatorio_usa_o_preco_do_dia_do_agendamento(dono, cliente):
+    agendar(cliente, servico="corte")
+    dono.put("/api/painel/servicos/corte", json=servico("Corte clássico", duracao=30, preco=9900))
+    r = relatorio(dono)
+    assert r["faturamentoCentavos"] == 4000
+    assert r["porServico"][0]["nome"] == "Corte clássico"  # nome atual do serviço
+
+
+def test_cliente_que_ja_veio_antes_nao_e_novo(dono, cliente, outro_cliente):
+    agendar(cliente, hora="10:00")
+    agendar(cliente, hora="10:00", data=QUARTA)
+    agendar(outro_cliente, hora="11:00", data=QUARTA, telefone="(21) 91111-2222", nome="Outra Pessoa")
+    r = relatorio(dono, inicio=QUARTA, fim=QUARTA)
+    assert (r["clientes"], r["clientesNovos"]) == (2, 1)
+
+
+@pytest.mark.parametrize(
+    ("inicio", "fim", "mensagem"),
+    [
+        ("2026-11-11", "2026-11-10", "A data final precisa ser igual ou depois da inicial."),
+        ("2026-01-01", "2027-01-02", "Escolha um período de até 1 ano."),
+    ],
+)
+def test_periodo_invalido(dono, inicio, fim, mensagem):
+    r = dono.get("/api/painel/relatorio", params={"inicio": inicio, "fim": fim})
+    assert r.status_code == 422 and r.json()["detail"] == mensagem

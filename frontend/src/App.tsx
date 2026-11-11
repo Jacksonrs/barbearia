@@ -11,6 +11,7 @@ import MeusAgendamentos from './pages/MeusAgendamentos.tsx'
 import NaoEncontrada from './pages/NaoEncontrada.tsx'
 import AgendaDoDia from './pages/painel/AgendaDoDia.tsx'
 import Painel from './pages/painel/Painel.tsx'
+import Relatorios from './pages/painel/Relatorios.tsx'
 import Servicos from './pages/painel/Servicos.tsx'
 
 export default function App() {
@@ -48,6 +49,7 @@ export default function App() {
             >
               <Route index element={<AgendaDoDia />} />
               <Route path="servicos" element={<Servicos />} />
+              <Route path="relatorios" element={<Relatorios />} />
             </Route>
             <Route path="*" element={<NaoEncontrada />} />
           </Route>

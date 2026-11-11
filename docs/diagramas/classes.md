@@ -55,6 +55,7 @@ classDiagram
         +String hora
         +String servicoNome
         +int duracaoMin
+        +int precoCentavos
         +String clienteNome
         +String clienteTelefone
         +String clienteEmail
@@ -96,7 +97,7 @@ classDiagram
 
 ## Observações
 
-- **Agendamento copia dados** do serviço (`servicoNome`, `duracaoMin`) e do contato
+- **Agendamento copia dados** do serviço (`servicoNome`, `duracaoMin`, `precoCentavos`) e do contato
   (`cliente*`) no momento da criação (RN21, RN22). Por isso, o histórico não muda se o
   serviço ou a conta forem alterados depois.
 - **Expediente** tem 7 registros, um por dia da semana (0 = domingo). Horários

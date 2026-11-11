@@ -14,8 +14,9 @@ import {
   type NovoAgendamento,
   type Servico,
 } from '../src/types/agendamento.ts'
+import type { Relatorio } from '../src/types/relatorio.ts'
 import type { Credenciais, DadosCadastro, Usuario } from '../src/types/usuario.ts'
-import { deIso, horaParaMinutos, minutosParaHora } from '../src/utils/datas.ts'
+import { deIso, horaParaMinutos, minutosParaHora, paraIso } from '../src/utils/datas.ts'
 import { lerBanco, zerarBanco, type UsuarioArmazenado } from './dados/armazenamento.ts'
 import { funcionamentoExemplo, INTERVALO_MIN } from './dados/dadosExemplo.ts'
 
@@ -218,6 +219,66 @@ function salvarServico(dados: DadosServico, id?: string) {
   return json(novo, 201)
 }
 
+// ----- Relatório (versão simplificada do backend: usa o preço atual do serviço) -----
+
+function relatorio(inicio: string, fim: string): Relatorio {
+  apenasDono()
+  const { agendamentos, servicos, barbeiros } = lerBanco()
+  const doPeriodo = agendamentos.filter((a) => a.data >= inicio && a.data <= fim)
+  const confirmados = doPeriodo.filter((a) => a.status === 'confirmado')
+  const cancelados = doPeriodo.filter((a) => a.status === 'cancelado')
+  const preco = (a: Agendamento) => servicos.find((s) => s.id === a.servicoId)?.precoCentavos ?? 0
+  const faturamento = confirmados.reduce((soma, a) => soma + preco(a), 0)
+
+  const agrupar = (chave: (a: Agendamento) => string, nome: (id: string) => string) => {
+    const grupos = new Map<string, Agendamento[]>()
+    for (const a of confirmados) grupos.set(chave(a), [...(grupos.get(chave(a)) ?? []), a])
+    return [...grupos].map(([id, lista]) => ({
+      id,
+      nome: nome(id),
+      quantidade: lista.length,
+      faturamentoCentavos: lista.reduce((soma, a) => soma + preco(a), 0),
+    }))
+  }
+
+  const porDia = []
+  for (let d = deIso(inicio); d <= deIso(fim); d.setDate(d.getDate() + 1)) {
+    const data = paraIso(d)
+    const doDia = confirmados.filter((a) => a.data === data)
+    porDia.push({ data, quantidade: doDia.length, faturamentoCentavos: doDia.reduce((s, a) => s + preco(a), 0) })
+  }
+  const porDiaSemana = [0, 0, 0, 0, 0, 0, 0]
+  for (const a of confirmados) porDiaSemana[deIso(a.data).getDay()]++
+  const clientes = agrupar((a) => a.clienteId, () => '')
+
+  return {
+    inicio,
+    fim,
+    agendamentos: confirmados.length,
+    cancelados: cancelados.length,
+    canceladosPeloCliente: cancelados.filter((a) => a.canceladoPor === 'cliente').length,
+    faturamentoCentavos: faturamento,
+    faturamentoRealizadoCentavos: confirmados
+      .filter((a) => inicioAgendamento(a).getTime() <= Date.now())
+      .reduce((soma, a) => soma + preco(a), 0),
+    ticketMedioCentavos: confirmados.length ? Math.round(faturamento / confirmados.length) : 0,
+    clientes: clientes.length,
+    clientesNovos: clientes.length,
+    porServico: agrupar((a) => a.servicoId, (id) => servicos.find((s) => s.id === id)?.nome ?? id),
+    porBarbeiro: agrupar((a) => a.barbeiroId, (id) => barbeiros.find((b) => b.id === id)?.nome ?? id),
+    porDiaSemana,
+    porHora: agrupar((a) => `${a.hora.slice(0, 2)}:00`, (h) => h).map((h) => ({
+      hora: h.id,
+      quantidade: h.quantidade,
+    })),
+    porDia,
+    clientesFrequentes: clientes.map((c) => {
+      const a = confirmados.find((x) => x.clienteId === c.id)!
+      return { nome: a.cliente.nome, telefone: a.cliente.telefone, quantidade: c.quantidade }
+    }),
+  }
+}
+
 // ----- Rotas -----
 
 function rotear(metodo: string, url: URL, corpo: any): Response {
@@ -267,6 +328,8 @@ function rotear(metodo: string, url: URL, corpo: any): Response {
     case 'POST /painel/servicos':
       apenasDono()
       return salvarServico(corpo)
+    case 'GET /painel/relatorio':
+      return json(relatorio(busca.get('inicio')!, busca.get('fim')!))
   }
 
   const cancelar = rota.match(/^POST \/agendamentos\/([^/]+)\/cancelar$/)

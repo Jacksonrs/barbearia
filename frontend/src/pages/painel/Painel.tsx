@@ -1,4 +1,4 @@
-import { CalendarDays, Scissors } from 'lucide-react'
+import { BarChart3, CalendarDays, Scissors } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 export default function Painel() {
@@ -16,6 +16,9 @@ export default function Painel() {
           </NavLink>
           <NavLink to="/painel/servicos">
             <Scissors size={18} aria-hidden="true" /> Serviços
+          </NavLink>
+          <NavLink to="/painel/relatorios">
+            <BarChart3 size={18} aria-hidden="true" /> Relatórios
           </NavLink>
         </nav>
 
