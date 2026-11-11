@@ -10,6 +10,7 @@ from . import config
 # (tabela, coluna, tipo) — o tipo precisa de DEFAULT para preencher as linhas antigas.
 COLUNAS_NOVAS = [
     ("servicos", "preco_centavos", "INTEGER NOT NULL DEFAULT 0"),
+    ("agendamentos", "preco_centavos", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 
