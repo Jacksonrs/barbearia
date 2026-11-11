@@ -16,8 +16,10 @@ from .seed import popular
 
 @asynccontextmanager
 async def ciclo_de_vida(_: FastAPI):
-    # Sem migrations por enquanto: cria as tabelas que faltam e insere os dados iniciais.
+    # Sem migrations por enquanto: cria as tabelas que faltam, adiciona as colunas novas
+    # em tabelas que já existiam e insere os dados iniciais.
     database.Base.metadata.create_all(database.engine)
+    database.adicionar_colunas_novas(database.engine)
     with database.SessaoLocal() as db:
         popular(db)
     yield
